@@ -997,19 +997,30 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const disModalEl=document.getElementById('dischargeModal'); if(disModalEl) disModalEl.addEventListener('shown.bs.modal',()=>{ toggleDisFields(); setTimeout(()=>document.getElementById('disType')?.focus?.(),150); });
   setInterval(()=>{ const el=document.getElementById('currentTime'); if(el) el.innerText=new Date().toLocaleString('th-TH',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}); },1000);
   const inTimeEl=document.getElementById('inTime'); if(inTimeEl) inTimeEl.addEventListener('blur',function(){ this.value=formatTimeForInput(this.value); });
-        // อัตโนมัติ Logout หากไม่มีการขยับเมาส์ 10 นาที (600,000 มิลลิวินาที)
+
+});
+  // ── แก้ไข Auto-Logout ให้อยู่ข้างนอก และให้เป็นอิสระ ──
+
 let logoutTimer;
 function resetLogoutTimer() {
     clearTimeout(logoutTimer);
+    // ตั้งค่า 1 นาที = 60,000 ms
     logoutTimer = setTimeout(() => {
-        if(currentUser) doLogout();
-    }, 60000); 
+        // เช็คว่าถ้ามีการ Login อยู่ค่อย Logout
+        if (typeof currentUser !== 'undefined' && currentUser) {
+            console.log("Auto-Logout triggered");
+            doLogout(); 
+        }
+    }, 30000); 
 }
+
+// ผูก Event ไว้กับ Document เพื่อตรวจจับการขยับเมาส์หรือการพิมพ์
 document.addEventListener('mousemove', resetLogoutTimer);
 document.addEventListener('keypress', resetLogoutTimer);
+document.addEventListener('scroll', resetLogoutTimer);
+
+// เริ่มนับเวลาทันทีที่โหลดหน้าเว็บ
 resetLogoutTimer();
-  });
-});
 
   /* ════════════════════════════════════════════════
    AUDIT LOGS
