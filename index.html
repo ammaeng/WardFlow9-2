@@ -582,17 +582,20 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
   }
 });
 
-async function doLogout() {
-  if (await appConfirm('ออกจากระบบ?', 'คุณต้องการออกจากระบบใช่หรือไม่?', 'question', 'ใช่, ออกจากระบบ', 'btn-danger')) {
-    try {
-      // ✅ ส่งข้อมูล currentUser ไปด้วยเพื่อให้ Server รู้ว่าใคร Logout
-      await callApi('logLogout', { nurseId: currentUser.id, nurseName: currentUser.name });
-    } catch(e) { console.error("Logout log error", e); }
-    
-    localStorage.removeItem(AUTH_KEY); 
-    _cachedDropdowns = null; 
-    location.reload(); 
+// แก้ไขฟังก์ชันเดิมให้รับค่า force ได้
+async function doLogout(force = false) {
+  // ถ้า force เป็น false (ปกติกดปุ่ม) ถึงจะโชว์ confirm
+  if (!force) {
+    if (!await appConfirm('ออกจากระบบ?', 'คุณต้องการออกจากระบบใช่หรือไม่?', 'question', 'ใช่, ออกจากระบบ', 'btn-danger')) return;
   }
+  
+  try {
+    await callApi('logLogout', { nurseId: currentUser.id, nurseName: currentUser.name });
+  } catch(e) { console.error("Logout log error", e); }
+  
+  localStorage.removeItem(AUTH_KEY); 
+  _cachedDropdowns = null; 
+  location.reload(); 
 }
 
 async function callApi(action, data = null) {
@@ -1605,9 +1608,9 @@ function showLogoutWarning() {
         countdownInterval = setInterval(() => {
             timeLeft--;
             document.getElementById('logoutTimerDisplay').innerText = timeLeft;
-            if (timeLeft <= 0) {
+       if (timeLeft <= 0) {
                 clearInterval(countdownInterval);
-                doLogout(); // ครบเวลาแล้ว Logout ทันที
+                doLogout(true); // ✅ เพิ่ม true เพื่อสั่งให้ออกทันทีโดยไม่ถาม confirm
             }
         }, 1000);
     }
