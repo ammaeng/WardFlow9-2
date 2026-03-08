@@ -909,9 +909,38 @@ window.saveQaInc=saveQaInc;
 window.delQaInc=delQaInc;
 window.openQaTab=openQaTab;
 
+  // โค้ดที่หายไป... นำมาแปะตรงนี้ครับ ⬇️
+function genderOf(p){ const g=String(p?.rawData?.[COL.GENDER]||'').trim(); if(g.includes('หญิง')) return 'F'; if(g.includes('ชาย')) return 'M'; return 'U'; }
+function typeOf(p){ return String(p?.patientStatus||p?.rawData?.[COL.STATUS]||'').trim(); }
+function isOutcomeClosed(r){ return !!(r?.[COL.DC_DATE]||r?.[COL.TRANSFER_OUT_DATE]||r?.[COL.ABSCOND_DATE]||r?.[COL.REFUSE_DATE]||r?.[COL.REFER_OUT_DATE]||r?.[COL.DEATH_DATE]); }
+function countByGender(list){ let F=0,M=0; list.forEach(p=>{ const g=genderOf(p); if(g==='F') F++; else if(g==='M') M++; }); return {F,M,T:F+M}; }
+function sumInc(list,type){ return (list||[]).filter(x=>x.eventType===type).reduce((s,x)=>s+(parseFloat(x.value)||0),0); }
+function avgInc(list,type){ const a=(list||[]).filter(x=>x.eventType===type).map(x=>parseFloat(x.value)||0); if(!a.length) return null; return a.reduce((s,v)=>s+v,0)/a.length; }
+function phlebitisByGrade(list){ const out={1:0,2:0,3:0,4:0}; (list||[]).filter(x=>x.eventType==='PHLEBITIS').forEach(x=>{ const g=parseInt(x.grade,10); if(out[g]!==undefined) out[g]+=(parseFloat(x.value)||1); }); return out; }
+function deptFromRow(r){ const s=(String(r?.[COL.WARD]||'').trim()||String(r?.[COL.SAI]||'').trim()).toLowerCase(); if(!s) return 'ไม่ระบุ'; if(s.includes('med')||s.includes('อายุร')) return 'อายุรศาสตร์'; if(s.includes('surg')||s.includes('ศัลย')) return 'ศัลยศาสตร์'; if(s.includes('ped')||s.includes('กุมาร')) return 'กุมารเวชศาสตร์'; if(s.includes('obs')||s.includes('สูติ')) return 'สูติศาสตร์'; return String(r?.[COL.WARD]||'').trim()||String(r?.[COL.SAI]||'').trim()||'ไม่ระบุ'; }
+
+function parseThaiDateClient(dStr){ if(!dStr) return null; const p=String(dStr).split('/'); if(p.length<3) return null; const d=new Date(parseInt(p[2],10)-543,parseInt(p[1],10)-1,parseInt(p[0],10)); d.setHours(0,0,0,0); return isNaN(d.getTime())?null:d; }
+function parseTimeHMClient(t){ const s=String(t||'').trim(); if(!s||s==='0'||!s.includes(':')) return {h:0,m:0}; const a=s.split(':'); return {h:parseInt(a[0],10)||0,m:parseInt(a[1],10)||0}; }
+function calculateUtilDaysClient(inDateStr,inTimeStr,outDateStr,outTimeStr,period,asOfDate){
+  if(!inDateStr||!period?.start||!period?.end) return 0;
+  const start=parseThaiDateClient(inDateStr); if(!start) return 0;
+  const inHM=parseTimeHMClient(inTimeStr); start.setHours(inHM.h,inHM.m,0,0);
+  let end; if(outDateStr){ end=parseThaiDateClient(outDateStr); if(!end) return 0; const outHM=parseTimeHMClient(outTimeStr); end.setHours(String(outTimeStr||'').includes(':')?outHM.h:23,String(outTimeStr||'').includes(':')?outHM.m:59,0,0); } else { end=new Date(asOfDate); end.setHours(23,59,0,0); }
+  const cs=start<period.start?new Date(period.start):new Date(start);
+  const ce=end>period.end?new Date(period.end):new Date(end);
+  if(ce<cs) return 0;
+  const d1=new Date(cs.getFullYear(),cs.getMonth(),cs.getDate());
+  const d2=new Date(ce.getFullYear(),ce.getMonth(),ce.getDate());
+  return Math.round((d2-d1)/86400000)+1;
+}
+// ⬆️ นำมาแปะตรงนี้ครับ ⬆️
+
 /* ════════════════════════════════════════════════
    FULL REPORTS & PRINTING
 ════════════════════════════════════════════════ */
+
+
+  
 async function showFullReport(btn){ 
   lastTriggerEl=btn||document.activeElement; lastTriggerEl?.blur?.();
   if(!currentSheet) return showError('ยังไม่ได้เลือกเดือน');
