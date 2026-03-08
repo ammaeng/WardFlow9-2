@@ -585,13 +585,16 @@ const AUTH_KEY = "cloudWard.auth";
 /* ════════════════════════════════════════════════
    AUTH & API LAYER 
 ════════════════════════════════════════════════ */
-function checkAuth() {
+async function checkAuth() {
   const authData = JSON.parse(localStorage.getItem(AUTH_KEY) || "null");
   const now = new Date().getTime();
   // หมดอายุใน 12 ชั่วโมง
   if (authData && (now - authData.time < 12 * 60 * 60 * 1000)) {
     currentUser = authData;
-    showMainApp();
+    // โหลดข้อมูลอัตโนมัติสำหรับคนล็อกอินค้างไว้
+    Swal.fire({title:'กำลังโหลดข้อมูล...', allowOutsideClick:false, didOpen:()=>Swal.showLoading()});
+    await bootApp();
+    Swal.close();
   } else {
     document.getElementById('loginOverlay').style.display = 'flex';
     document.getElementById('mainApp').style.display = 'none';
@@ -602,13 +605,20 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const id = document.getElementById('loginId').value.trim();
   const pin = document.getElementById('loginPin').value.trim();
-  Swal.fire({title:'กำลังเข้าสู่ระบบ...', allowOutsideClick:false, didOpen:()=>Swal.showLoading()});
+  
+  // โชว์ Loading ค้างไว้ตั้งแต่เริ่มกด Login
+  Swal.fire({title:'กำลังเข้าสู่ระบบและเตรียมข้อมูล...', allowOutsideClick:false, didOpen:()=>Swal.showLoading()});
+  
   try {
     const res = await callApi('login', { username: id, pin: pin });
     currentUser = { id: res.nurseId, name: res.nurseName, role: res.role, time: new Date().getTime() };
     localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
+    
+    // โหลดข้อมูลทุกอย่างให้เสร็จ 100% ก่อน
+    await bootApp();
+    
+    // ปิด Loading และโชว์หน้าเว็บที่พร้อมใช้งานทันที
     Swal.close();
-    showMainApp();
   } catch(err) {
     Swal.fire('เข้าสู่ระบบไม่สำเร็จ', err.message, 'error');
   }
@@ -620,11 +630,16 @@ function doLogout() {
   });
 }
 
-function showMainApp() {
+// ฟังก์ชันศูนย์กลาง สำหรับเตรียมความพร้อมระบบก่อนแสดงผล
+async function bootApp() {
+  document.getElementById('nurseIdText').innerText = currentUser.name;
+  
+  // รอโหลดข้อมูล ปี -> เดือน -> ข้อมูลตาราง ให้เสร็จสมบูรณ์
+  await initSheets(); 
+  
+  // เมื่อทุกอย่างเสร็จ ค่อยซ่อนหน้า Login และโชว์หน้า Main App
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('mainApp').style.display = 'block';
-  document.getElementById('nurseIdText').innerText = currentUser.name;
-  initSheets(); // Boot system
 }
 
 async function callApi(action, data = null) {
@@ -693,7 +708,16 @@ async function initYearSelector() {
     currentYearBE = years[0]; sel.value = currentYearBE;
   }
 }
-async function onYearChange() { currentYearBE = Number(document.getElementById('yearSelector').value); currentSheet = ""; await loadSheetSelector(); loadDashboard(); }
+
+async function onYearChange() { 
+  currentYearBE = Number(document.getElementById('yearSelector').value); 
+  currentSheet = ""; 
+  Swal.fire({title:'กำลังเปลี่ยนปี...', allowOutsideClick:false, didOpen:()=>Swal.showLoading()});
+  await loadSheetSelector(); 
+  await loadDashboard(true); 
+  Swal.close();
+}
+
 async function loadSheetSelector() {
   const names = await callApi('getSheetNames', { yearBE: currentYearBE });
   const sel   = document.getElementById('sheetSelector');
@@ -702,33 +726,48 @@ async function loadSheetSelector() {
   currentSheet = [...names].sort((a,b)=>{ const da=sheetNameToDate(a), db=sheetNameToDate(b); if(!da&&!db) return 0; if(!da) return 1; if(!db) return -1; return db-da; })[0];
   sel.value = currentSheet;
 }
+
 async function initSheets() {
   await initYearSelector();
   const names = await callApi('getSheetNames', { yearBE: currentYearBE });
   const sel = document.getElementById('sheetSelector'); const btnClose = document.getElementById('btnCloseMonth');
+  
   if (!names || names.length === 0) {
     sel.innerHTML = '<option value="">ยังไม่มีข้อมูล</option>'; btnClose.innerText = "เริ่มเดือนแรก"; btnClose.classList.remove('btn-danger'); btnClose.classList.add('btn-warning');
     currentSheet = ""; lastData = []; updateSummary([]); document.getElementById('censusContent').innerHTML = "ยังไม่มีข้อมูล"; return;
   }
+  
   sel.innerHTML = names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
   btnClose.innerText = "ปิดยอดเดือน"; btnClose.classList.remove('btn-warning'); btnClose.classList.add('btn-danger');
   currentSheet =[...names].sort((a,b)=>{ const da=sheetNameToDate(a),db=sheetNameToDate(b); if(!da&&!db) return 0; if(!da) return 1; if(!db) return -1; return db-da; })[0];
-  sel.value = currentSheet; loadDashboard();
+  sel.value = currentSheet; 
+  
+  // สั่งโหลดตารางข้อมูล โดยส่ง true เพื่อบอกว่า "ห้ามโชว์ Popup โหลดข้อมูลซ้อนทับ เพราะกำลังบูทระบบอยู่"
+  await loadDashboard(true); 
 }
-function onSheetChange(){ currentSheet = document.getElementById('sheetSelector').value; loadDashboard(); }
+
+async function onSheetChange(){ 
+  currentSheet = document.getElementById('sheetSelector').value; 
+  await loadDashboard(); 
+}
 
 /* ════════════════════════════════════════════════
    DASHBOARD
 ════════════════════════════════════════════════ */
-function loadDashboard() {
-  Swal.fire({ title:'โหลดข้อมูล...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
-  callApi('getAllData', { sheetName: currentSheet, yearBE: currentYearBE })
-    .then(data => {
-      lastData = Array.isArray(data) ? data :[];
-      rebuildIndex(); updateSummary(lastData);
-      document.getElementById('sheetStatusChip').innerText = 'โหลดแล้ว';
-      renderTables(); Swal.close();
-    }).catch(err => Swal.fire('ผิดพลาด', err.toString(), 'error'));
+async function loadDashboard(isSilent = false) {
+  if(!isSilent) Swal.fire({ title:'โหลดข้อมูล...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
+  
+  try {
+    const data = await callApi('getAllData', { sheetName: currentSheet, yearBE: currentYearBE });
+    lastData = Array.isArray(data) ? data :[];
+    rebuildIndex(); updateSummary(lastData);
+    document.getElementById('sheetStatusChip').innerText = 'โหลดแล้ว';
+    renderTables(); 
+    if(!isSilent) Swal.close();
+  } catch(err) {
+    if(!isSilent) Swal.fire('ผิดพลาด', err.toString(), 'error');
+    else console.error('Load Dashboard Error:', err);
+  }
 }
 
 function isCarryRow(x)       { return (x.patientStatus||x.rawData?.[COL.STATUS]||'').trim()==='ยอดยกมา'; }
@@ -750,7 +789,7 @@ function getItemByRowId(rowId){ return lastDataByRowId.get(String(rowId)) || nul
 function quickSearch(which, text){ tableState[which].search = String(text||''); const dt = which==='carry' ? carryDT : newDT; if(dt) dt.search(tableState[which].search).draw(); }
 function setTableFilter(which, mode){
   tableState[which].filter = mode;
-  const ids = which==='carry' ? ['carryFilterAll','carryFilterActive','carryFilterDC','carryFilterLong'] :['newFilterAll','newFilterActive','newFilterDC','newFilterLong'];
+  const ids = which==='carry' ?['carryFilterAll','carryFilterActive','carryFilterDC','carryFilterLong'] :['newFilterAll','newFilterActive','newFilterDC','newFilterLong'];
   ids.forEach(id => document.getElementById(id)?.classList.remove('active'));
   const hit = which==='carry' ? (mode==='ALL'?'carryFilterAll':mode==='ACTIVE'?'carryFilterActive':mode==='DC'?'carryFilterDC':'carryFilterLong') : (mode==='ALL'?'newFilterAll':'newFilterActive');
   document.getElementById(hit)?.classList.add('active');
@@ -1055,7 +1094,7 @@ function buildCrossYearTable(rows, byYear, colors){
 }
 
 /* ════════════════════════════════════════════════
-   QA CARDS v3 ENGINE 
+   QA CARDS v3 ENGINE (Hybrid)
 ════════════════════════════════════════════════ */
 let qaIncidents=[], qaDeviceTags=[], qaReport=null, qaOpenForms={};
 function switchQaTab(n){[2,3].forEach(function(i){var el=document.getElementById('qaPane'+i);if(el) el.style.display=(i===n)?'':'none';document.getElementById('qaTab'+i+'Btn')?.classList.toggle('active',i===n);});if(n===2) loadQaCards();}
@@ -1197,9 +1236,9 @@ function renderWaitScatter(){var el=document.getElementById('waitScatter');if(!e
 window.switchQaTab=switchQaTab;window.loadQaCards=loadQaCards;window.toggleQaForm=toggleQaForm;window.selGrade=selGrade;window.saveQaInc=saveQaInc;window.delQaInc=delQaInc;window.openQaTab=openQaTab;
 
 /* ════════════════════════════════════════════════
-   FULL REPORTS & PRINTING (เดิมทั้งหมด)
+   FULL REPORTS & PRINTING
 ════════════════════════════════════════════════ */
-async function showFullReport(btn){ /* ฟังก์ชันเดิม ไม่มีการเปลี่ยนแปลงโค้ดการคำนวณ... */
+async function showFullReport(btn){ 
   lastTriggerEl=btn||document.activeElement; lastTriggerEl?.blur?.();
   if(!currentSheet) return Swal.fire('ยังไม่ได้เลือกเดือน','','warning');
   Swal.fire({ title:'คำนวณรายงาน...', didOpen:()=>Swal.showLoading() });
@@ -1354,19 +1393,41 @@ function printPressureUlcerReport() {
     win.document.write(html);
     win.document.close();
 }
-/* ════════════════════════════════════════════════
-   ระบบ Dx Tags & Print (ส่วนที่ตกหล่น)
-════════════════════════════════════════════════ */
-function renderDxTags(which){ const box=document.getElementById(which+'Box'),input=document.getElementById(which+'Input'),hidden=document.getElementById(which); if(!box||!input||!hidden) return; [...box.querySelectorAll('.dx-tag')].forEach(el=>el.remove()); dxTagState[which].tags.forEach((t,i)=>{ const tag=document.createElement('span'); tag.className='dx-tag'+(i===0?' primary':''); tag.innerHTML=`<span>${escapeHtml(t)}</span><span class="x" title="ลบ">×</span>`; tag.querySelector('.x').onclick=ev=>{ev.stopPropagation();removeDxTag(which,i);}; box.insertBefore(tag,input); }); hidden.value=tagsToString(dxTagState[which].tags); }
-function addDxTag(which,token){ const t=normalizeDxToken(token); if(!t||t.length<2) return; if(!dxTagState[which].tags.some(x=>x.toLowerCase()===t.toLowerCase())) dxTagState[which].tags.push(t); dxTagState[which].activeIdx=-1; renderDxTags(which); }
-function removeDxTag(which,idx){ dxTagState[which].tags.splice(idx,1); dxTagState[which].activeIdx=-1; renderDxTags(which); }
-function setSuggest(which,list){ dxTagState[which].suggest=list||[]; dxTagState[which].selected=0; renderSuggest(which); }
-function renderSuggest(which){ const sug=document.getElementById(which+'Suggest'),input=document.getElementById(which+'Input'); if(!sug||!input) return; const q=normalizeDxToken(input.value),list=dxTagState[which].suggest; if(!q||list.length===0){ sug.style.display='none'; sug.innerHTML=''; return; } sug.style.display='block'; sug.innerHTML=list.map((t,i)=>`<div class="item ${i===dxTagState[which].selected?'active':''}" data-i="${i}">${escapeHtml(t)}<div class="muted">กด Enter</div></div>`).join(''); sug.querySelectorAll('.item').forEach(el=>{ el.onmousedown=ev=>{ev.preventDefault();chooseSuggest(which,parseInt(el.getAttribute('data-i'),10)||0);}; }); }
-function chooseSuggest(which,index){ const hit=(dxTagState[which].suggest||[])[index]; if(!hit) return; addDxTag(which,hit); document.getElementById(which+'Input').value=''; setSuggest(which,[]); document.getElementById(which+'Suggest').style.display='none'; }
-function computeSuggest(q){ const key=q.toLowerCase(),a=DX_OPTIONS.filter(x=>x.toLowerCase().startsWith(key)),b=DX_OPTIONS.filter(x=>!a.includes(x)&&x.toLowerCase().includes(key)); return [...a,...b].slice(0,12); }
-function commitCurrentToken(which){ const input=document.getElementById(which+'Input'); if(!input) return; const raw=input.value,sugList=dxTagState[which].suggest||[],sel=dxTagState[which].selected??0; if(sugList.length>0&&normalizeDxToken(raw)&&sel>=0){chooseSuggest(which,sel);return;} splitDxList(raw).map(normalizeDxToken).filter(Boolean).forEach(p=>addDxTag(which,p)); input.value=''; setSuggest(which,[]); document.getElementById(which+'Suggest').style.display='none'; }
-function initDxTagInput(which){ const input=document.getElementById(which+'Input'); if(!input) return; input.addEventListener('input',()=>{ const q=normalizeDxToken(input.value).replace(/;.*$/,''); if(!q||q.length<1){setSuggest(which,[]);return;} setSuggest(which,computeSuggest(q)); }); input.addEventListener('keydown',e=>{ const hasSug=(dxTagState[which].suggest||[]).length>0; if(e.key==='Enter'||e.key===';'){e.preventDefault();commitCurrentToken(which);return;} if(hasSug&&(e.key==='ArrowDown'||e.key==='ArrowUp')){ e.preventDefault(); const n=dxTagState[which].suggest.length; dxTagState[which].selected=e.key==='ArrowDown'?((dxTagState[which].selected??0)+1)%n:((dxTagState[which].selected??0)-1+n)%n; renderSuggest(which); return; } if(e.key==='Backspace'&&!input.value&&dxTagState[which].tags.length>0) removeDxTag(which,dxTagState[which].tags.length-1); }); input.addEventListener('blur',()=>{ setTimeout(()=>{ const el=document.getElementById(which+'Suggest'); if(el) el.style.display='none'; },120); }); }
-function loadDxTagsFromHidden(which){ const hidden=document.getElementById(which); if(!hidden) return; dxTagState[which].tags=splitToTags(hidden.value); renderDxTags(which); }
+
+function commitCurrentToken(which){ 
+  const input=document.getElementById(which+'Input'); if(!input) return; 
+  const raw=input.value,sugList=dxTagState[which].suggest||[],sel=dxTagState[which].selected??0; 
+  if(sugList.length>0&&normalizeDxToken(raw)&&sel>=0){chooseSuggest(which,sel);return;} 
+  splitDxList(raw).map(normalizeDxToken).filter(Boolean).forEach(p=>addDxTag(which,p)); 
+  input.value=''; setSuggest(which,[]); document.getElementById(which+'Suggest').style.display='none'; 
+}
+
+function initDxTagInput(which){
+  const input=document.getElementById(which+'Input'); if(!input) return;
+  input.addEventListener('input',()=>{
+    const q=normalizeDxToken(input.value).replace(/;.*$/,'');
+    if(!q||q.length<1){setSuggest(which,[]);return;}
+    setSuggest(which,computeSuggest(q));
+  });
+  input.addEventListener('keydown',e=>{
+    const hasSug=(dxTagState[which].suggest||[]).length>0;
+    if(e.key==='Enter'||e.key===';'){e.preventDefault();commitCurrentToken(which);return;}
+    if(hasSug&&(e.key==='ArrowDown'||e.key==='ArrowUp')){
+      e.preventDefault(); const n=dxTagState[which].suggest.length;
+      dxTagState[which].selected=e.key==='ArrowDown'?((dxTagState[which].selected??0)+1)%n:((dxTagState[which].selected??0)-1+n)%n;
+      renderSuggest(which); return;
+    }
+    if(e.key==='Backspace'&&!input.value&&dxTagState[which].tags.length>0) removeDxTag(which,dxTagState[which].tags.length-1);
+  });
+  input.addEventListener('blur',()=>{ setTimeout(()=>{ const el=document.getElementById(which+'Suggest'); if(el) el.style.display='none'; },120); });
+}
+
+function loadDxTagsFromHidden(which){ 
+  const hidden=document.getElementById(which); 
+  if(!hidden) return; 
+  dxTagState[which].tags=splitToTags(hidden.value); 
+  renderDxTags(which); 
+}
 
 function printOfficialReport(){ 
   if(!currentReportCtx) return; 
@@ -1376,6 +1437,7 @@ function printOfficialReport(){
   win.focus(); 
   setTimeout(()=>win.print(),500); 
 }
+
 window.showFullReport=showFullReport;
 window.printOfficialReport=printOfficialReport;
 window.closeMonthUI=closeMonthUI;
