@@ -585,8 +585,8 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 async function doLogout() {
   if (await appConfirm('ออกจากระบบ?', 'คุณต้องการออกจากระบบใช่หรือไม่?', 'question', 'ใช่, ออกจากระบบ', 'btn-danger')) {
     try {
-      // เรียก API ไปบันทึกการ Logout ก่อนลบ session
-      await callApi('logLogout', {});
+      // ✅ ส่งข้อมูล currentUser ไปด้วยเพื่อให้ Server รู้ว่าใคร Logout
+      await callApi('logLogout', { nurseId: currentUser.id, nurseName: currentUser.name });
     } catch(e) { console.error("Logout log error", e); }
     
     localStorage.removeItem(AUTH_KEY); 
@@ -981,6 +981,17 @@ document.addEventListener('DOMContentLoaded', ()=>{
       btn.innerHTML = originalText;
       btn.disabled = false;
     }
+    // อัตโนมัติ Logout หากไม่มีการขยับเมาส์ 10 นาที (600,000 มิลลิวินาที)
+let logoutTimer;
+function resetLogoutTimer() {
+    clearTimeout(logoutTimer);
+    logoutTimer = setTimeout(() => {
+        if(currentUser) doLogout();
+    }, 60000); 
+}
+document.addEventListener('mousemove', resetLogoutTimer);
+document.addEventListener('keypress', resetLogoutTimer);
+resetLogoutTimer();
   });
 
   // 🚀 Dropdown loading now handled by initAppOptimized
