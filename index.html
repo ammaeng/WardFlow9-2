@@ -1,16 +1,3 @@
-
-```
-
-**สิ่งที่ต้องทำบน Apps Script หลังจากวางโค้ดเสร็จ:**
-ให้กดเลือกฟังก์ชัน **`setupFirstTime`** จากแถบด้านบน แล้วกด **▷ เรียกใช้ (Run)** อีก 1 รอบครับ 
-*(เพื่อที่ระบบจะได้สร้างชีท `Staffs` ให้ และสร้างรหัส Admin เริ่มต้นคือ `admin / 1234` ให้ครับ)*
-
----
-
-#### ขั้นตอนที่ 2: อัปเดตฝั่ง Frontend (`HTML`)
-คัดลอกโค้ดนี้ไปวางทับไฟล์ `HTML` ของคุณทั้งหมดครับ (ผมใส่หน้าต่าง Login และเพิ่มแท็บ "ประวัติการใช้งาน" ให้แล้วเรียบร้อย)
-
-```html
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -1367,7 +1354,53 @@ function printPressureUlcerReport() {
     win.document.write(html);
     win.document.close();
 }
+/* ════════════════════════════════════════════════
+   โค้ดส่วนที่ตกหล่น (DX Tags & Print Report)
+════════════════════════════════════════════════ */
 
+function commitCurrentToken(which){ 
+  const input=document.getElementById(which+'Input'); if(!input) return; 
+  const raw=input.value,sugList=dxTagState[which].suggest||[],sel=dxTagState[which].selected??0; 
+  if(sugList.length>0&&normalizeDxToken(raw)&&sel>=0){chooseSuggest(which,sel);return;} 
+  splitDxList(raw).map(normalizeDxToken).filter(Boolean).forEach(p=>addDxTag(which,p)); 
+  input.value=''; setSuggest(which,[]); document.getElementById(which+'Suggest').style.display='none'; 
+}
+
+function initDxTagInput(which){
+  const input=document.getElementById(which+'Input'); if(!input) return;
+  input.addEventListener('input',()=>{
+    const q=normalizeDxToken(input.value).replace(/;.*$/,'');
+    if(!q||q.length<1){setSuggest(which,[]);return;}
+    setSuggest(which,computeSuggest(q));
+  });
+  input.addEventListener('keydown',e=>{
+    const hasSug=(dxTagState[which].suggest||[]).length>0;
+    if(e.key==='Enter'||e.key===';'){e.preventDefault();commitCurrentToken(which);return;}
+    if(hasSug&&(e.key==='ArrowDown'||e.key==='ArrowUp')){
+      e.preventDefault(); const n=dxTagState[which].suggest.length;
+      dxTagState[which].selected=e.key==='ArrowDown'?((dxTagState[which].selected??0)+1)%n:((dxTagState[which].selected??0)-1+n)%n;
+      renderSuggest(which); return;
+    }
+    if(e.key==='Backspace'&&!input.value&&dxTagState[which].tags.length>0) removeDxTag(which,dxTagState[which].tags.length-1);
+  });
+  input.addEventListener('blur',()=>{ setTimeout(()=>{ const el=document.getElementById(which+'Suggest'); if(el) el.style.display='none'; },120); });
+}
+
+function loadDxTagsFromHidden(which){ 
+  const hidden=document.getElementById(which); 
+  if(!hidden) return; 
+  dxTagState[which].tags=splitToTags(hidden.value); 
+  renderDxTags(which); 
+}
+
+function printOfficialReport(){ 
+  if(!currentReportCtx) return; 
+  const win=window.open('','_blank'); 
+  win.document.write(buildTabularReportHTML(currentReportCtx)); 
+  win.document.close(); 
+  win.focus(); 
+  setTimeout(()=>win.print(),500); 
+}
 window.showFullReport=showFullReport;
 window.printOfficialReport=printOfficialReport;
 window.closeMonthUI=closeMonthUI;
