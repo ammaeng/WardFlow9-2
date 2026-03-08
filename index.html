@@ -1583,15 +1583,17 @@ function printOfficialReport(){
 let logoutTimer;
 let countdownInterval;
 
+function resetLogoutTimer() {let logoutTimer; // Timer หลัก (นับถอยหลังก่อนเตือน)
+let countdownInterval; // Interval สำหรับเลขใน Modal
+
 function resetLogoutTimer() {
     clearTimeout(logoutTimer);
     clearInterval(countdownInterval);
-    countdown = 60; // Reset เวลานับถอยหลังใหม่
     
-    // ตั้งเวลา 50 วินาทีถึงจะเริ่มเด้งหน้าต่างเตือน
+    // ตั้งเวลา 50,000 ms (50 วินาที) ถ้าไม่มีการขยับเลย ให้เริ่มแสดง Modal
     logoutTimer = setTimeout(() => {
         showLogoutWarning();
-    }, 10000); 
+    }, 50000); 
 }
 
 function showLogoutWarning() {
@@ -1599,15 +1601,15 @@ function showLogoutWarning() {
         const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('logoutWarningModal'));
         modal.show();
         
-        countdown = 10; // นับถอยหลัง 10 วินาทีสุดท้าย
-        document.getElementById('logoutTimerDisplay').innerText = countdown;
+        let timeLeft = 10; // นับถอยหลัง 10 วินาทีใน Modal
+        document.getElementById('logoutTimerDisplay').innerText = timeLeft;
         
         countdownInterval = setInterval(() => {
-            countdown--;
-            document.getElementById('logoutTimerDisplay').innerText = countdown;
-            if (countdown <= 0) {
+            timeLeft--;
+            document.getElementById('logoutTimerDisplay').innerText = timeLeft;
+            if (timeLeft <= 0) {
                 clearInterval(countdownInterval);
-                doLogout(); // เด้งออกเมื่อครบ 1 นาที
+                doLogout(); // ครบเวลาแล้ว Logout ทันทีโดยไม่ต้องถาม confirm
             }
         }, 1000);
     }
@@ -1616,15 +1618,17 @@ function showLogoutWarning() {
 function stayLoggedIn() {
     const modal = bootstrap.Modal.getInstance(document.getElementById('logoutWarningModal'));
     modal.hide();
-    resetLogoutTimer(); // เริ่มนับใหม่
+    clearInterval(countdownInterval); // หยุดนับถอยหลัง
+    resetLogoutTimer(); // เริ่มนับ 50 วินาทีใหม่
 }
 
-// ผูก Event
+// ผูก Event ให้ Reset เวลาใหม่ทุกครั้งที่มีการขยับ
 document.addEventListener('mousemove', resetLogoutTimer);
 document.addEventListener('keypress', resetLogoutTimer);
 document.addEventListener('scroll', resetLogoutTimer);
 document.addEventListener('touchstart', resetLogoutTimer);
 
+// เริ่มนับครั้งแรก
 resetLogoutTimer();
 
 
