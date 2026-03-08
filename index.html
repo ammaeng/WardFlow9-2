@@ -699,8 +699,22 @@ async function loadDashboard(isSilent = false) {
 function isCarryRow(x)       { return (x.patientStatus||x.rawData?.[COL.STATUS]||'').trim()==='ยอดยกมา'; }
 function isNewThisMonthRow(x){ const st=(x.patientStatus||x.rawData?.[COL.STATUS]||'').trim(); return st==='รับใหม่'||st==='รับย้าย'||st==='รับ Refer'; }
 
-function updateSummary(all){
-  document.getElementById('sumCarry').innerText  = all.filter(isCarryRow).length; document.getElementById('sumNew').innerText    = all.filter(isNewThisMonthRow).length; document.getElementById('sumTotal').innerText  = all.length; document.getElementById('sumActive').innerText = all.filter(x=>x.status==='ยังรักษาอยู่').length; document.getElementById('sumDC').innerText     = all.filter(x=>x.status==='จำหน่ายแล้ว').length; document.getElementById('sumRows').innerText   = all.length;
+function updateSummary(all) {
+  // สร้างรายการ ID ที่เราต้องการอัปเดต
+  const ids = {
+    sumCarry: all.filter(isCarryRow).length,
+    sumNew: all.filter(isNewThisMonthRow).length,
+    sumTotal: all.length,
+    sumActive: all.filter(x => x.status === 'ยังรักษาอยู่').length,
+    sumDC: all.filter(x => x.status === 'จำหน่ายแล้ว').length,
+    sumRows: all.length
+  };
+
+  // วนลูปเช็คว่า ID ไหนมีอยู่จริงในหน้าจอ ค่อยสั่งใส่ค่า (ป้องกัน Error)
+  for (const [id, value] of Object.entries(ids)) {
+    const el = document.getElementById(id);
+    if (el) el.innerText = value;
+  }
 }
 
 function rebuildIndex(){ lastDataByRowId = new Map(); lastData.forEach(x => lastDataByRowId.set(String(x.rowId), x)); }
