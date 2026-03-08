@@ -469,10 +469,12 @@
 const COL = { STATUS:0, SEQ:1, HN:2, AN:3, PREFIX:4, NAME:5, GENDER:6, AGE:7, ADDRESS:8, SITHI:9, WARD:10, SAI:11, ADMIT_DATE:12, ADMIT_TIME:13, ADMIT_DEPT:14, TRANSFER_IN_DATE:15, TRANSFER_IN_TIME:16, TRANSFER_IN_DEPT:17, REFER_IN_DATE:18, REFER_IN_TIME:19, REFER_IN_DEPT:20, DX1:21, DX2:22, DC_DATE:23, FU:24, ADMIT_UNDER6:25, LOS:26, WAIT_TIME:27, OUT_TIME:28, TRANSFER_OUT_DATE:29, TRANSFER_OUT:30, REFER_OUT_DATE:31, REFER_DEST:32, ABSCOND_DATE:33, REFUSE_DATE:34, DEATH_DATE:35, PHONE:36, RELATIVE_PHONE1:37, RELATIVE_PHONE2:38 };
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsl00T-VpU3Fd9ESFGk-tlXwpGjED2dYj3Up8kymZwZDgeh3z94x_RT_8HZDBbLk8/exec";
 
-let currentSheet = ""; let currentYearBE = null;        
+let currentSheet = ""; let currentYearBE = null;       
 
-let activeDT, dcDT, auditDT;
-const tableState = { active:{ filter:'ALL', search:'' }, dc:{ filter:'ALL', search:'' } };
+  let carryDT, newDT, dcDT, auditDT;
+const tableState = { carry:{ filter:'ALL', search:'' }, new:{ filter:'ALL', search:'' }, dc:{ filter:'ALL', search:'' } };
+
+
 let lastData =[], lastDataByRowId = new Map();
 let lastTriggerEl = null, disItem = null, DX_OPTIONS = [];
 
@@ -807,11 +809,8 @@ function buildRowHtml(item) {
   </tr>`;
 }
 
-// 1. เปลี่ยนตัวแปรตาราง
-let carryDT, newDT, dcDT, auditDT;
-const tableState = { carry:{ filter:'ALL', search:'' }, new:{ filter:'ALL', search:'' }, dc:{ filter:'ALL', search:'' } };
 
-// 2. แก้ไขฟังก์ชัน renderTables
+
 function renderTables() {
   const carryList = lastData.filter(isCarryRow);
   const newList = lastData.filter(isNewThisMonthRow);
