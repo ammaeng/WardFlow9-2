@@ -477,7 +477,10 @@ let currentSheet = ""; let currentYearBE = null;
 let activeDT, dcDT, auditDT, sithiChart, saiChart;
 const tableState = { active:{ filter:'ALL', search:'' }, dc:{ filter:'ALL', search:'' } };
 let lastData =[], lastDataByRowId = new Map();
-let lastTriggerEl = null, disItem = null, DX_OPTIONS =
+
+// ✅ แก้ไขบรรทัดนี้ เติม[]; ต่อท้ายให้สมบูรณ์
+let lastTriggerEl = null, disItem = null, DX_OPTIONS =[];
+
 let currentReportCtx = null;
 const dxTagState = { dx1:{ tags:[], activeIdx:-1, suggest:[], selected:-1 }, dx2:{ tags:[], activeIdx:-1, suggest:[], selected:-1 } };
 
