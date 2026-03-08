@@ -1445,6 +1445,34 @@ function loadDxTagsFromHidden(which){
   renderDxTags(which); 
 }
 
+  function loadDxTagsFromHidden(which){ 
+  const hidden=document.getElementById(which); 
+  if(!hidden) return; 
+  dxTagState[which].tags=splitToTags(hidden.value); 
+  renderDxTags(which); 
+}
+
+// ⬇️ โค้ดที่เพิ่งเติมเข้าไป ⬇️
+function printOfficialReport(){ 
+  if(!currentReportCtx) return; 
+  const win=window.open('','_blank'); 
+  win.document.write(buildTabularReportHTML(currentReportCtx)); 
+  win.document.close(); 
+  win.focus(); 
+  setTimeout(()=>win.print(),500); 
+}
+
+window.showFullReport=showFullReport;
+window.printOfficialReport=printOfficialReport;
+window.closeMonthUI=closeMonthUI;
+window.onSheetChange=onSheetChange;
+window.onYearChange=onYearChange;
+window.showCrossYearReport=showCrossYearReport;
+window.filterCrossYear=filterCrossYear;
+</script>
+</body>
+</html>
+
 window.showFullReport=showFullReport;
 window.printOfficialReport=printOfficialReport;
 window.closeMonthUI=closeMonthUI;
