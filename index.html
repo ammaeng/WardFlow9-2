@@ -628,33 +628,49 @@ function editPatient(item){
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
-  checkAuth(); $.Thailand({ database: 'https://earthchie.github.io/jquery.Thailand.js/jquery.Thailand.js/database/db.json', $district: $('#addrDistrict'), $amphoe: $('#addrAmphoe'), $province: $('#addrProvince'), $zipcode: $('#addrZipcode') });
+  checkAuth();
+  
+  $.Thailand({ database: 'https://earthchie.github.io/jquery.Thailand.js/jquery.Thailand.js/database/db.json', $district: $('#addrDistrict'), $amphoe: $('#addrAmphoe'), $province: $('#addrProvince'), $zipcode: $('#addrZipcode') });
 
   document.getElementById('dataForm').addEventListener('submit', async(e)=>{
-    e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); const originalText = btn.innerHTML; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังบันทึก...'; btn.disabled = true;
+    e.preventDefault(); 
+    
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังบันทึก...';
+    btn.disabled = true;
+
     const inT=document.getElementById('inType').value; const existingStatus=(document.getElementById('patientStatusStored').value||'').trim(); const statusToSave=(existingStatus==='ยอดยกมา')?'ยอดยกมา':(existingStatus||inT||'รับใหม่');
     let addrParts =[]; let l1 = document.getElementById('addrLine1').value.trim(); let dt = document.getElementById('addrDistrict').value.trim(); let am = document.getElementById('addrAmphoe').value.trim(); let pv = document.getElementById('addrProvince').value.trim(); let zp = document.getElementById('addrZipcode').value.trim();
     if(l1) addrParts.push(l1); if(dt && !dt.startsWith('ต.') && !dt.startsWith('แขวง')) dt = 'ต.' + dt; if(dt) addrParts.push(dt); if(am && !am.startsWith('อ.') && !am.startsWith('เขต')) am = 'อ.' + am; if(am) addrParts.push(am); if(pv && !pv.startsWith('จ.') && pv !== 'กรุงเทพมหานคร') pv = 'จ.' + pv; if(pv) addrParts.push(pv); if(zp) addrParts.push(zp);
     const finalAddress = addrParts.join(' '); document.getElementById('address').value = finalAddress;
+
     const formData={ rowId: document.getElementById('rowId').value, seq: document.getElementById('seq').value, patientStatus: statusToSave, prefix: document.getElementById('prefix').value, patientName: document.getElementById('patientName').value, gender: document.getElementById('gender').value, age: `${document.getElementById('ageYear').value} ปี ${document.getElementById('ageMonth').value} เดือน ${document.getElementById('ageDay').value} วัน`, hn: document.getElementById('hn').value, an: document.getElementById('an').value, ward: document.getElementById('ward').value, sai: document.getElementById('sai').value, sithi: document.getElementById('sithi').value, dx1: document.getElementById('dx1').value, dx2: document.getElementById('dx2').value, address: finalAddress };
     const iD=formatDateForSheet(document.getElementById('inDate').value); const iT=document.getElementById('inTime').value; const iDep=document.getElementById('inDept').value;
     if(inT==='รับใหม่') { formData.newMark=iD; formData.newTime=iT; formData.newDept=iDep; } else if(inT==='รับย้าย'){ formData.transferMark=iD; formData.transferTime=iT; formData.transferDept=iDep; } else { formData.referMark=iD; formData.referTime=iT; formData.referDept=iDep; }
-    try{ await callApi('processData',{ targetSheet:currentSheet, yearBE:currentYearBE, formData }); showSuccess('บันทึกข้อมูลผู้ป่วยสำเร็จ'); new bootstrap.Tab(document.querySelector('button[data-bs-target="#list-pane"]')).show(); loadDashboard(true); } catch(err){ showError('เกิดข้อผิดพลาด: ' + err.message); } finally { btn.innerHTML = originalText; btn.disabled = false; }
+    
+    try{ 
+      await callApi('processData',{ targetSheet:currentSheet, yearBE:currentYearBE, formData }); 
+      showSuccess('บันทึกข้อมูลผู้ป่วยสำเร็จ'); 
+      new bootstrap.Tab(document.querySelector('button[data-bs-target="#list-pane"]')).show(); 
+      loadDashboard(true); 
+    } catch(err){ 
+      showError('เกิดข้อผิดพลาด: ' + err.message); 
+    } finally {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }
   });
 
-callApi('getDropdownData').then(d=>{
+  callApi('getDropdownData').then(d=>{
     fillSelect('ward',d.ward); fillSelect('sithi',d.sithi); fillSelect('sai',d.sai);
     
-    // ตรวจสอบก่อนว่ามี dxList อยู่ไหม ถ้าไม่มีก็ข้ามไป (ป้องกัน Error)
     const dxEl = document.getElementById('dxList');
     if(dxEl) {
       dxEl.innerHTML=(d.dx||[]).map(x=>`<option value="${escapeHtml(x)}">`).join(''); 
     }
     
-    DX_OPTIONS=(d.dx||[]).map(x=>String(x)).filter(Boolean);
-    initDxTagInput('dx1'); initDxTagInput('dx2'); loadDxTagsFromHidden('dx1'); loadDxTagsFromHidden('dx2');
-  });
-
+    DX_OPTIONS=(d.dx||
 async function checkAN(){ formatHNAN('an'); const anValue=document.getElementById('an').value, rowId=document.getElementById('rowId').value; if(!rowId&&anValue){ try{ const isDup=await callApi('checkDuplicateAN',{ targetSheet:currentSheet, yearBE:currentYearBE, an:anValue }); if(isDup) showError(`พบ AN ซ้ำ! AN ${anValue} มีอยู่แล้ว`); } catch(err){} } }
 
 /* ════════════════════════════════════════════════
