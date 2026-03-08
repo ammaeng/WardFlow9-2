@@ -135,6 +135,21 @@
     .tt-menu { background-color: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 5px 10px rgba(0,0,0,.2); z-index: 1050; padding: 4px 0; }
     .tt-suggestion { padding: 4px 10px; font-size: 13px; cursor: pointer; }
     .tt-suggestion:hover { background-color: #f1f5f9; color: #0d6efd; }
+
+    /* ── QA Hybrid Layout (Summary & Accordion) ── */
+    .qa-summary-box { background: #fff; border: 1px solid rgba(0,0,0,.08); border-radius: 12px; padding: 12px 8px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.03); transition: transform 0.2s; height: 100%; }
+    .qa-summary-box:hover { transform: translateY(-2px); }
+    .qa-summary-label { font-size: 11px; color: #64748b; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+    .qa-summary-val { font-size: 22px; font-weight: 900; line-height: 1.1; }
+    .qa-summary-val.danger { color: #dc2626; }
+    .qa-summary-val.warning { color: #d97706; }
+    .qa-summary-val.success { color: #059669; }
+    
+    .qa-accordion .accordion-item { border: 1px solid rgba(0,0,0,.08); border-radius: 14px !important; margin-bottom: 10px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,.02); border-left: 4px solid #0d6efd; }
+    .qa-accordion .accordion-button { font-family: 'Sarabun', sans-serif; font-weight: 800; font-size: 14.5px; color: #1e293b; padding: 14px 20px; background: #fff; box-shadow: none !important; }
+    .qa-accordion .accordion-button:not(.collapsed) { background: #f8fafc; color: #0d6efd; border-bottom: 1px solid rgba(0,0,0,.05); }
+    .qa-accordion .accordion-body { padding: 16px 20px; background: #fff; }
+    .qa-status-inline { display: inline-flex; padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: 700; align-items: center; gap: 8px; margin-bottom: 14px; }
   </style>
 </head>
 
@@ -1573,55 +1588,134 @@ async function loadQaCards(){
 }
 
 function renderAllCards(){
+  document.getElementById('qaCardGrid').classList.remove('qc-grid'); // ปิด Grid แบบเก่า
+  
   var pd=qaReport?.patientDays||0,k=qaReport?.indicators||{};
   var byType=function(t){return qaIncidents.filter(function(x){return x.eventType===t;});};
   var sumVal=function(t){return byType(t).reduce(function(s,x){return s+(parseFloat(x.value)||0);},0);};
   var r1k=function(n){return pd>0?(n/pd*1000):0;};
   var fmtR=function(n){return n.toFixed(1);};
   var rCol=function(v,th){return v>=th?'#dc2626':v>0?'#d97706':'#059669';};
+
+  // ดึงข้อมูลตัวเลขที่สำคัญ
   var ventTags=qaDeviceTags.filter(function(t){return t.deviceType==='VENT';}),icdTags=qaDeviceTags.filter(function(t){return t.deviceType==='ICD';});
   var ventDays=ventTags.reduce(function(s,t){return s+(t.autoCalcDays||0);},0),icdDays=icdTags.reduce(function(s,t){return s+(t.autoCalcDays||0);},0);
+  
+  var vPU = sumVal('PRESSURE_ULCER'), vFall = sumVal('FALL'), vMedErr = sumVal('MED_ERROR');
+  var vET = sumVal('UNPLANNED_ET'), vICD = sumVal('ICD_DISLODGE');
+  var vCPR = sumVal('UNPLANNED_CPR'), vICU = sumVal('UNPLANNED_ICU'), vWP = sumVal('WRONG_PROCEDURE'), vWS = sumVal('WRONG_SURGERY'), vWT = sumVal('WRONG_TRANSFUSION');
+  var vSevere = vCPR + vICU + vWP + vWS + vWT;
+  
   var phlG=function(g){return qaIncidents.filter(function(x){return x.eventType==='PHLEBITIS'&&String(x.grade)===String(g);}).length;};
   var phlTotal=phlG(1)+phlG(2)+phlG(3)+phlG(4);
   var phlColors=['','#86efac','#fcd34d','#fdba74','#fca5a5'];
-  var html='';
-
-  /* Card 11-14 */
-  html+=mkCard('s1','🛡️','11-14','ความปลอดภัยผู้ป่วย','#2563eb','<div class="d-flex gap-2 flex-wrap mb-2">'+sb('Vent',ventTags.length,'ราย','#2563eb')+sb('Vent Days',ventDays,'วัน','#2563eb','#dbeafe')+sb('ICD',icdTags.length,'ราย','#7c3aed')+sb('ICD Days',icdDays,'วัน','#7c3aed','#f5f3ff')+'</div>'+irow('11','Unplanned ET tube',sumVal('UNPLANNED_ET'),'ครั้ง',null,rCol(sumVal('UNPLANNED_ET'),1))+itbl(byType('UNPLANNED_ET'))+irow('13','ICD Line หลุด',sumVal('ICD_DISLODGE'),'ครั้ง',fmtR(r1k(sumVal('ICD_DISLODGE')))+'/1000',rCol(sumVal('ICD_DISLODGE'),1))+itbl(byType('ICD_DISLODGE'))+'<div class="qc-divider mt-2">VENTILATOR</div>'+dtbl(ventTags,'#2563eb')+'<div class="qc-divider mt-1">ICD LINE</div>'+dtbl(icdTags,'#7c3aed'),['UNPLANNED_ET','ICD_DISLODGE'],false,false);
-
-  //* Card 15-17 */
-  var ae=[{l:'แผลกดทับ',n:sumVal('PRESSURE_ULCER'),th:5},{l:'หกล้ม',n:sumVal('FALL'),th:2},{l:'ยาคลาดเคลื่อน',n:sumVal('MED_ERROR'),th:5}];
   
-  var titleWithPrintBtn = 'เหตุไม่พึงประสงค์ <button class="btn btn-sm btn-outline-danger ms-auto rounded-pill" onclick="printPressureUlcerReport()" style="font-size:10px; padding:2px 8px;"><i class="bi bi-printer"></i> พิมพ์ใบแผลกดทับ</button>';
+  var nA = ((k.k25_note_qty_pct||0) + (k.k25_note_qlt_pct||0)) / 2;
+  var avgW = k.k26_avg_wait_min||0;
+  var ghi=byType('GHI'), ghiLv=ghi.length>0?(ghi[ghi.length-1].level||'-'):'-';
 
-  html+=mkCard('s2','⚠️','15-17', titleWithPrintBtn,'#dc2626','<div class="d-flex gap-2 mb-2">'+ae.map(function(x){var ok=r1k(x.n)<x.th;return '<div class="qc-status-box" style="background:'+(ok?'#ecfdf5':'#fef2f2')+';border:1px solid '+(ok?'#6ee7b7':'#fca5a5')+'"><div style="font-size:10px;font-weight:700;color:#64748b">'+x.l+'</div><div style="font-size:17px;font-weight:900;color:'+(ok?'#059669':'#dc2626')+'">'+x.n+'</div><div style="font-size:10px;color:#64748b">'+fmtR(r1k(x.n))+'/1000</div></div>';}).join('')+'</div>'+irow('15','แผลกดทับ',sumVal('PRESSURE_ULCER'),'ครั้ง',fmtR(r1k(sumVal('PRESSURE_ULCER')))+'/1000',rCol(r1k(sumVal('PRESSURE_ULCER')),5))+itbl(byType('PRESSURE_ULCER'),true)+irow('16','พลัดตกหกล้ม',sumVal('FALL'),'ครั้ง',fmtR(r1k(sumVal('FALL')))+'/1000',rCol(r1k(sumVal('FALL')),2))+itbl(byType('FALL'),false,true)+irow('17','คลาดเคลื่อนยา',sumVal('MED_ERROR'),'ครั้ง',fmtR(r1k(sumVal('MED_ERROR')))+'/1000',rCol(r1k(sumVal('MED_ERROR')),5))+itbl(byType('MED_ERROR')),['PRESSURE_ULCER','FALL','MED_ERROR'],true,true);
+  /* ── 1. Executive Summary Dashboard ── */
+  var sumBox = function(lbl, val, cCls) {
+    return `<div class="col-6 col-md-3"><div class="qa-summary-box"><div class="qa-summary-label">${lbl}</div><div class="qa-summary-val ${cCls}">${val}</div></div></div>`;
+  };
 
-  /* Card 18 GHI */
-  var ghi=byType('GHI'),ghiLv=ghi.length>0?(ghi[ghi.length-1].level||'-'):'-';
-  html+=mkCard('s3','📋','18','GHI อุบัติการณ์เฉพาะโรค','#0891b2',(ghi.length>0?'<div class="d-flex align-items-center gap-3 mb-2"><div style="width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#0891b2,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff">'+escapeHtml(ghiLv)+'</div><div><b>ระดับ '+escapeHtml(ghiLv)+'</b><div style="font-size:10px;color:#64748b">ล่าสุด</div></div></div>':'<div style="text-align:center;padding:16px;color:#059669"><div style="font-size:28px">✓</div><div style="font-weight:700;font-size:12px">ไม่มีเหตุการณ์</div></div>')+itbl(ghi,false,true),['GHI'],false,true);
+  var html = `<div class="row g-2 mb-4">
+      ${sumBox('แผลกดทับ', vPU, vPU>0?'danger':'success')}
+      ${sumBox('หกล้ม', vFall, vFall>0?'warning':'success')}
+      ${sumBox('ยาคลาดเคลื่อน', vMedErr, vMedErr>0?'danger':'success')}
+      ${sumBox('ท่อ+สายหลุด', vET+vICD, (vET+vICD)>0?'warning':'success')}
+      ${sumBox('อุบัติการณ์ร้ายแรง', vSevere, vSevere>0?'danger':'success')}
+      ${sumBox('Phlebitis', phlTotal, phlTotal>0?'warning':'success')}
+      ${sumBox('บันทึกพยาบาล', nA.toFixed(0)+'%', nA>=80?'success':'warning')}
+      ${sumBox('รอ D/C', avgW.toFixed(0)+' นาที', avgW>60?'warning':'success')}
+    </div>`;
 
-  /* Card 19-23 */
+  /* ── 2. Accordion Helpers ── */
+  html += `<div class="accordion qa-accordion" id="qaAccordion">`;
+  
+  var mkAcc = function(id, icon, title, content, color='#0d6efd') {
+    return `<div class="accordion-item" style="border-left-color: ${color}">
+      <h2 class="accordion-header" id="hd_${id}">
+        <button class="accordion-button collapsed d-flex justify-content-between w-100" type="button" data-bs-toggle="collapse" data-bs-target="#col_${id}">
+          <span><span style="font-size:18px; margin-right:8px;">${icon}</span> ${title}</span>
+        </button>
+      </h2>
+      <div id="col_${id}" class="accordion-collapse collapse" data-bs-parent="#qaAccordion">
+        <div class="accordion-body">${content}</div>
+      </div>
+    </div>`;
+  };
+
+  var mkInner = function(fk, body, types, nG, nL) {
+    var o = qaOpenForms[fk];
+    return `${body}
+      <button class="qc-add-btn ${o?'open':''}" onclick="toggleQaForm('${fk}')" style="margin-top:16px;">
+        ${o?'▲ ซ่อนฟอร์มบันทึก':'<span style="font-size:15px">+</span> เพิ่มเหตุการณ์'}
+      </button>
+      <div id="qaForm_${fk}" style="display:${o?'block':'none'}; margin-top:8px;">
+        ${mkForm(fk, types, nG, nL)}
+      </div>`;
+  };
+
+  /* ── เนื้อหาแต่ละ Accordion ── */
+
+  // 11-14 ท่อและสาย
+  var b11_14 = `<div class="d-flex gap-2 flex-wrap mb-3">${sb('Vent',ventTags.length,'ราย','#2563eb','#dbeafe')}${sb('Vent Days',ventDays,'วัน','#2563eb','#eff6ff')}${sb('ICD',icdTags.length,'ราย','#7c3aed','#f5f3ff')}${sb('ICD Days',icdDays,'วัน','#7c3aed','#faf5ff')}</div>` +
+               irow('11','Unplanned ET tube',sumVal('UNPLANNED_ET'),'ครั้ง',null,rCol(sumVal('UNPLANNED_ET'),1)) + itbl(byType('UNPLANNED_ET')) +
+               irow('13','ICD Line หลุด',sumVal('ICD_DISLODGE'),'ครั้ง',fmtR(r1k(sumVal('ICD_DISLODGE')))+'/1000',rCol(sumVal('ICD_DISLODGE'),1)) + itbl(byType('ICD_DISLODGE')) +
+               `<div class="qc-divider mt-3">VENTILATOR (Device Tracking)</div>` + dtbl(ventTags,'#2563eb') +
+               `<div class="qc-divider mt-2">ICD LINE (Device Tracking)</div>` + dtbl(icdTags,'#7c3aed');
+  html += mkAcc('acc11', '🛡️', 'ข้อ 11-14: ท่อและสาย (ET, ICD, Vent)', mkInner('s1', b11_14, ['UNPLANNED_ET','ICD_DISLODGE'], false, false), '#2563eb');
+
+  // 15 แผลกดทับ
+  var b15 = `<div class="qa-status-inline" style="background:${r1k(vPU)<5?'#ecfdf5':'#fef2f2'}; border:1px solid ${r1k(vPU)<5?'#6ee7b7':'#fca5a5'};">จำนวนแผล: <span style="font-size:18px; color:${r1k(vPU)<5?'#059669':'#dc2626'};">${vPU}</span> | อัตรา ${fmtR(r1k(vPU))}/1000</div>` +
+            itbl(byType('PRESSURE_ULCER'), true);
+  var t15 = `ข้อ 15: แผลกดทับ (Pressure Ulcer) <button class="btn btn-sm btn-outline-danger ms-auto rounded-pill" onclick="event.stopPropagation(); printPressureUlcerReport();" style="font-size:11px; padding:2px 10px; z-index:10; position:relative;"><i class="bi bi-printer"></i> พิมพ์ใบแผลกดทับ</button>`;
+  html += mkAcc('acc15', '⚠️', t15, mkInner('s15', b15, ['PRESSURE_ULCER'], true, true), '#dc2626');
+
+  // 16 หกล้ม
+  var b16 = `<div class="qa-status-inline" style="background:${r1k(vFall)<2?'#ecfdf5':'#fffbeb'}; border:1px solid ${r1k(vFall)<2?'#6ee7b7':'#fcd34d'};">จำนวนหกล้ม: <span style="font-size:18px; color:${r1k(vFall)<2?'#059669':'#d97706'};">${vFall}</span> | อัตรา ${fmtR(r1k(vFall))}/1000</div>` + itbl(byType('FALL'), false, true);
+  html += mkAcc('acc16', '⚠️', 'ข้อ 16: พลัดตกหกล้ม (Fall)', mkInner('s16', b16, ['FALL'], false, false), '#d97706');
+
+  // 17 คลาดเคลื่อนยา
+  var b17 = `<div class="qa-status-inline" style="background:${r1k(vMedErr)<5?'#ecfdf5':'#fef2f2'}; border:1px solid ${r1k(vMedErr)<5?'#6ee7b7':'#fca5a5'};">จำนวนครั้ง: <span style="font-size:18px; color:${r1k(vMedErr)<5?'#059669':'#dc2626'};">${vMedErr}</span> | อัตรา ${fmtR(r1k(vMedErr))}/1000</div>` + itbl(byType('MED_ERROR'), false, false);
+  html += mkAcc('acc17', '💊', 'ข้อ 17: คลาดเคลื่อนยา (Med Error)', mkInner('s17', b17, ['MED_ERROR'], false, false), '#dc2626');
+
+  // 18 GHI
+  var b18 = `<div class="d-flex align-items-center gap-3 mb-3"><div style="width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#0891b2,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff">${escapeHtml(ghiLv)}</div><div><b>ระดับ ${escapeHtml(ghiLv)}</b><div style="font-size:10px;color:#64748b">ล่าสุด</div></div></div>` + itbl(ghi, false, true);
+  html += mkAcc('acc18', '📋', 'ข้อ 18: GHI อุบัติการณ์เฉพาะโรค', mkInner('s18', b18, ['GHI'], false, true), '#0891b2');
+
+  // 19-23 ร้ายแรง
   var i19=[{k:'UNPLANNED_CPR',n:'19',l:'Unplanned CPR'},{k:'UNPLANNED_ICU',n:'20',l:'Unplanned ICU'},{k:'WRONG_PROCEDURE',n:'21',l:'หัตถการผิด'},{k:'WRONG_SURGERY',n:'22',l:'ผ่าตัดผิด'},{k:'WRONG_TRANSFUSION',n:'23',l:'เลือดผิดคน'}];
-  html+=mkCard('s4','🚨','19-23','อุบัติการณ์ร้ายแรง','#dc2626',i19.map(function(x){return irow(x.n,x.l,sumVal(x.k),'ครั้ง',null,rCol(sumVal(x.k),1))+(sumVal(x.k)>0?itbl(byType(x.k)):'');}).join(''),i19.map(function(x){return x.k;}),false,false);
+  var b19_23 = i19.map(function(x){return irow(x.n,x.l,sumVal(x.k),'ครั้ง',null,rCol(sumVal(x.k),1))+(sumVal(x.k)>0?itbl(byType(x.k)):'');}).join('');
+  html += mkAcc('acc19', '🚨', 'ข้อ 19-23: หมวดอุบัติการณ์ร้ายแรง', mkInner('s19', b19_23, i19.map(x=>x.k), false, false), '#991b1b');
 
-  /* Card 24 Phlebitis */
-  html+=mkCard('s5','💉','24','Phlebitis','#d97706','<div class="d-flex gap-2 mb-2">'+sb('รวม',phlTotal,'','#d97706','#fffbeb')+sb('อัตรา',fmtR(r1k(phlTotal)),'/1000','#d97706')+'</div><div class="qc-phl-bar">'+[1,2,3,4].map(function(g){return phlG(g)>0?'<div class="qc-phl-seg" style="width:'+(phlG(g)/Math.max(phlTotal,1)*100)+'%;background:'+phlColors[g]+'">'+phlG(g)+'</div>':'';}).join('')+'</div><div class="d-flex gap-2 flex-wrap mb-2">'+[1,2,3,4].map(function(g){return '<span style="font-size:11px;font-weight:800"><span style="display:inline-block;width:8px;height:8px;border-radius:99px;background:'+phlColors[g]+'"></span> G'+g+':'+phlG(g)+'</span>';}).join('')+'</div>'+itbl(byType('PHLEBITIS'),true),['PHLEBITIS'],true,false);
+  // 24 Phlebitis
+  var b24 = `<div class="d-flex gap-2 mb-3">${sb('รวม',phlTotal,'','#d97706','#fffbeb')}${sb('อัตรา',fmtR(r1k(phlTotal)),'/1000','#d97706')}</div><div class="qc-phl-bar mb-2">${[1,2,3,4].map(function(g){return phlG(g)>0?'<div class="qc-phl-seg" style="width:'+(phlG(g)/Math.max(phlTotal,1)*100)+'%;background:'+phlColors[g]+'">'+phlG(g)+'</div>':'';}).join('')}</div><div class="d-flex gap-2 flex-wrap mb-3">${[1,2,3,4].map(function(g){return '<span style="font-size:11px;font-weight:800"><span style="display:inline-block;width:8px;height:8px;border-radius:99px;background:'+phlColors[g]+'"></span> G'+g+':'+phlG(g)+'</span>';}).join('')}</div>` + itbl(byType('PHLEBITIS'), true);
+  html += mkAcc('acc24', '💉', 'ข้อ 24: Phlebitis', mkInner('s24', b24, ['PHLEBITIS'], true, false), '#d97706');
 
-  /* Card 25 Gauge */
-  var nQ=k.k25_note_qty_pct||0,nL=k.k25_note_qlt_pct||0,nA=(nQ+nL)/2;
-  html+='<div class="qc"><div class="qc-head" style="background:#05966905"><span style="font-size:16px">📝</span><div style="flex:1"><span class="qc-no" style="color:#059669">ข้อ 25</span> <span class="qc-title">บันทึกทางการพยาบาล</span></div></div><div class="qc-body"><div class="d-flex gap-3 align-items-center justify-content-center flex-wrap"><div id="gaugeQty" class="gauge-wrap"></div><div id="gaugeQlt" class="gauge-wrap"></div><div style="text-align:center"><div style="font-size:10px;color:#64748b;font-weight:700">เฉลี่ย</div><div style="font-size:28px;font-weight:900;color:'+(nA>=80?'#059669':'#d97706')+'">'+nA.toFixed(0)+'%</div></div></div></div></div>';
+  // 25 บันทึกทางการพยาบาล
+  var b25 = `<div class="d-flex gap-4 align-items-center justify-content-center flex-wrap py-3"><div id="gaugeQty" class="gauge-wrap"></div><div id="gaugeQlt" class="gauge-wrap"></div><div style="text-align:center"><div style="font-size:11px;color:#64748b;font-weight:700">คะแนนเฉลี่ยรวม</div><div style="font-size:36px;font-weight:900;color:${nA>=80?'#059669':'#d97706'}">${nA.toFixed(0)}%</div></div></div>`;
+  html += mkAcc('acc25', '📝', 'ข้อ 25: สถิติบันทึกทางการพยาบาล', b25, '#059669'); // 25-27 เป็นสถิติ ไม่มีฟอร์มให้คีย์ในนี้
 
-  /* Card 26 Wait */
-  var avgW=k.k26_avg_wait_min||0;
-  html+='<div class="qc"><div class="qc-head" style="background:#0891b205"><span style="font-size:16px">⏱️</span><div style="flex:1"><span class="qc-no" style="color:#0891b2">ข้อ 26</span> <span class="qc-title">รอคอยกลับบ้าน</span></div></div><div class="qc-body"><div class="d-flex gap-3 align-items-center mb-2"><div style="padding:6px 14px;border-radius:12px;background:'+(avgW>90?'#fef2f2':avgW>60?'#fffbeb':'#ecfdf5')+';border:1.5px solid '+(avgW>90?'#fca5a5':avgW>60?'#fcd34d':'#6ee7b7')+'"><div style="font-size:10px;color:#64748b;font-weight:700">เฉลี่ย</div><div style="font-size:24px;font-weight:900;color:'+(avgW>90?'#dc2626':avgW>60?'#d97706':'#059669')+'">'+avgW.toFixed(0)+' <span style="font-size:11px;color:#64748b">นาที</span></div></div></div><div style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:3px">🟢 ต่ำกว่าเฉลี่ย 🟡 ใกล้เฉลี่ย 🔴 เกิน 30%</div><div id="waitScatter" style="width:100%;min-height:110px;"></div></div></div>';
+  // 26 รอ D/C
+  var b26 = `<div class="d-flex flex-column align-items-center mb-2 py-2"><div style="padding:8px 20px;border-radius:12px;background:${avgW>90?'#fef2f2':avgW>60?'#fffbeb':'#ecfdf5'};border:1.5px solid ${avgW>90?'#fca5a5':avgW>60?'#fcd34d':'#6ee7b7'}; text-align:center;"><div style="font-size:11px;color:#64748b;font-weight:700">เวลารอเฉลี่ย</div><div style="font-size:28px;font-weight:900;color:${avgW>90?'#dc2626':avgW>60?'#d97706':'#059669'}">${avgW.toFixed(0)} <span style="font-size:12px;color:#64748b">นาที</span></div></div><div style="font-size:11px;color:#64748b;font-weight:700;margin-top:8px">🟢 ต่ำกว่าเฉลี่ย 🟡 ใกล้เฉลี่ย 🔴 เกินเฉลี่ย 30%</div></div><div id="waitScatter" style="width:100%;min-height:140px;"></div>`;
+  html += mkAcc('acc26', '⏱️', 'ข้อ 26: รอคอยกลับบ้าน', b26, '#0891b2');
 
-  /* Card 27 Refer */
-  html+='<div class="qc"><div class="qc-head" style="background:#7c3aed05"><span style="font-size:16px">🔄</span><div style="flex:1"><span class="qc-no" style="color:#7c3aed">ข้อ 27</span> <span class="qc-title">Refer / Day Care</span></div></div><div class="qc-body"><div class="d-flex gap-2 flex-wrap">'+sb('Refer IN',k.k27_refer_in||0,'','#2563eb','#dbeafe')+sb('Refer OUT',k.k27_refer_out||0,'','#dc2626','#fef2f2')+sb('Refer Back',k.k27_refer_back||0,'','#d97706','#fffbeb')+sb('Day Care',k.k27_daycare||0,'','#059669','#ecfdf5')+'</div></div></div>';
+  // 27 Refer / Daycare
+  var b27 = `<div class="d-flex gap-3 flex-wrap py-2">${sb('Refer IN',k.k27_refer_in||0,'ราย','#2563eb','#dbeafe')}${sb('Refer OUT',k.k27_refer_out||0,'ราย','#dc2626','#fef2f2')}${sb('Refer Back',k.k27_refer_back||0,'ราย','#d97706','#fffbeb')}${sb('Day Care',k.k27_daycare||0,'ราย','#059669','#ecfdf5')}</div>`;
+  html += mkAcc('acc27', '🔄', 'ข้อ 27: Refer / Day Care', b27, '#7c3aed');
 
-  document.getElementById('qaCardGrid').innerHTML=html;
-  setTimeout(function(){renderGauge('gaugeQty',k.k25_note_qty_pct||0,'เชิงปริมาณ','#2563eb');renderGauge('gaugeQlt',k.k25_note_qlt_pct||0,'เชิงคุณภาพ','#059669');renderWaitScatter();},100);
+  html += `</div>`; // ปิด accordion
+  document.getElementById('qaCardGrid').innerHTML = html;
+
+  // เรนเดอร์กราฟ หลังจากสร้าง DOM เสร็จ
+  setTimeout(function(){
+    renderGauge('gaugeQty',k.k25_note_qty_pct||0,'เชิงปริมาณ','#2563eb');
+    renderGauge('gaugeQlt',k.k25_note_qlt_pct||0,'เชิงคุณภาพ','#059669');
+    renderWaitScatter();
+  }, 100);
 }
-
 function mkCard(fk,icon,no,title,ac,body,types,nG,nL){var o=qaOpenForms[fk];return '<div class="qc"><div class="qc-head" style="background:'+ac+'05"><span style="font-size:16px">'+icon+'</span><div style="flex:1;min-width:0"><div class="d-flex gap-2 align-items-baseline"><span class="qc-no" style="color:'+ac+'">ข้อ '+no+'</span><span class="qc-title" style="display:flex; width:100%; justify-content:space-between; align-items:center;">'+title+'</span></div></div></div><div class="qc-body">'+body+'<button class="qc-add-btn '+(o?'open':'')+'" onclick="toggleQaForm(\''+fk+'\')">'+(o?'▲ ซ่อน':'<span style="font-size:15px">+</span> เพิ่มเหตุการณ์')+'</button><div id="qaForm_'+fk+'" style="display:'+(o?'block':'none')+'">'+mkForm(fk,types,nG,nL)+'</div></div></div>';}
 function sb(l,v,u,c,ac){return '<div class="qc-stat" '+(ac?'style="background:'+ac+'"':'')+'><div class="qc-stat-label">'+l+'</div><div class="qc-stat-val" style="color:'+c+'">'+(v!=null?v:'-')+(u?'<span style="font-size:9px;color:#64748b">'+u+'</span>':'')+'</div></div>';}
 function irow(no,l,v,u,rate,vc){return '<div class="d-flex justify-content-between align-items-center" style="padding:5px 0;border-bottom:1.5px solid rgba(15,23,42,.05)"><span style="font-size:12px;font-weight:800"><span style="color:#94a3b8;margin-right:4px">'+no+'</span>'+escapeHtml(l)+'</span><div class="d-flex align-items-center gap-2"><span style="font-size:15px;font-weight:900;color:'+(vc||'#0f172a')+'">'+(v!=null?v:'-')+' <span style="font-size:10px;color:#64748b">'+(u||'')+'</span></span>'+(rate?'<span class="qc-pill" style="color:#d97706;background:#d9770612;border:1px solid #d9770620">'+rate+'</span>':'')+'</div></div>';}
