@@ -1580,17 +1580,15 @@ function printOfficialReport(){
 
   
   let countdown = 60; // 60 วินาที
-let logoutTimer;
-let countdownInterval;
-
-function resetLogoutTimer() {let logoutTimer; // Timer หลัก (นับถอยหลังก่อนเตือน)
+// ── ระบบ Auto-Logout (นับถอยหลัง) ──
+let logoutTimer; // Timer หลัก
 let countdownInterval; // Interval สำหรับเลขใน Modal
 
 function resetLogoutTimer() {
     clearTimeout(logoutTimer);
     clearInterval(countdownInterval);
     
-    // ตั้งเวลา 50,000 ms (50 วินาที) ถ้าไม่มีการขยับเลย ให้เริ่มแสดง Modal
+    // ตั้งเวลา 50,000 ms (50 วินาที) ถ้าไม่มีการขยับ ให้เริ่มแสดง Modal
     logoutTimer = setTimeout(() => {
         showLogoutWarning();
     }, 50000); 
@@ -1601,7 +1599,7 @@ function showLogoutWarning() {
         const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('logoutWarningModal'));
         modal.show();
         
-        let timeLeft = 10; // นับถอยหลัง 10 วินาทีใน Modal
+        let timeLeft = 10; // นับถอยหลัง 10 วินาทีสุดท้ายใน Modal
         document.getElementById('logoutTimerDisplay').innerText = timeLeft;
         
         countdownInterval = setInterval(() => {
@@ -1609,7 +1607,7 @@ function showLogoutWarning() {
             document.getElementById('logoutTimerDisplay').innerText = timeLeft;
             if (timeLeft <= 0) {
                 clearInterval(countdownInterval);
-                doLogout(); // ครบเวลาแล้ว Logout ทันทีโดยไม่ต้องถาม confirm
+                doLogout(); // ครบเวลาแล้ว Logout ทันที
             }
         }, 1000);
     }
@@ -1622,7 +1620,7 @@ function stayLoggedIn() {
     resetLogoutTimer(); // เริ่มนับ 50 วินาทีใหม่
 }
 
-// ผูก Event ให้ Reset เวลาใหม่ทุกครั้งที่มีการขยับ
+// ผูก Event ให้ Reset เวลาใหม่ทุกครั้งที่มีการขยับหรือแตะจอ
 document.addEventListener('mousemove', resetLogoutTimer);
 document.addEventListener('keypress', resetLogoutTimer);
 document.addEventListener('scroll', resetLogoutTimer);
@@ -1631,36 +1629,25 @@ document.addEventListener('touchstart', resetLogoutTimer);
 // เริ่มนับครั้งแรก
 resetLogoutTimer();
 
-
-
-// ฟังก์ชันแปลงเวลาแบบ Lazy Formatting (พิมพ์ 830 -> แปลงเป็น 08:30 ตอนคลิกไปช่องอื่น)
+// ── ฟังก์ชันแปลงเวลาแบบ Lazy Formatting (พิมพ์ 830 -> แปลงเป็น 08:30) ──
 function smartParseTime(el) {
   let val = el.value.trim();
-  if (!val) return;
+  if (!val || val.includes(':')) return;
 
-  // ถ้ามีเครื่องหมาย : อยู่แล้วก็ไม่ต้องทำอะไร (ถือว่าพิมพ์มาถูกแล้ว)
-  if (val.includes(':')) return;
-
-  // ดึงมาเฉพาะตัวเลข
   let num = val.replace(/\D/g, '');
   if (num.length === 0) return;
 
   let h = "00", m = "00";
-
   if (num.length <= 2) {
-    // พิมพ์แค่ 8 -> 08:00
     h = num.padStart(2, '0');
   } else if (num.length === 3) {
-    // พิมพ์ 830 -> 08:30
     h = "0" + num.substring(0, 1);
     m = num.substring(1, 3);
   } else {
-    // พิมพ์ 0830 หรือ 1430 -> 08:30, 14:30
     h = num.substring(0, 2);
     m = num.substring(2, 4);
   }
 
-  // ป้องกันค่าเกินเวลาจริง
   if (parseInt(h, 10) > 23) h = "23";
   if (parseInt(m, 10) > 59) m = "59";
 
@@ -1675,14 +1662,15 @@ window.onYearChange=onYearChange;
 window.showCrossYearReport=showCrossYearReport;
 window.filterCrossYear=filterCrossYear;
 </script>
-  <div class="modal fade" id="logoutWarningModal" data-bs-backdrop="static" tabindex="-1">
+
+<div class="modal fade" id="logoutWarningModal" data-bs-backdrop="static" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow-lg">
       <div class="modal-body text-center p-4">
         <i class="bi bi-clock-history text-danger" style="font-size: 3rem;"></i>
         <h5 class="fw-black mt-3">ระบบกำลังจะออกจากระบบ</h5>
         <p class="text-muted">เนื่องจากไม่มีการใช้งานเกิน 1 นาที</p>
-        <div class="display-4 fw-black text-danger my-3" id="logoutTimerDisplay">60</div>
+        <div class="display-4 fw-black text-danger my-3" id="logoutTimerDisplay">10</div>
         <button class="btn btn-primary rounded-pill w-100 fw-bold" onclick="stayLoggedIn()">ใช้งานต่อ</button>
       </div>
     </div>
