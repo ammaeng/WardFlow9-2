@@ -1140,10 +1140,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
   
   $.Thailand({ database: 'https://earthchie.github.io/jquery.Thailand.js/jquery.Thailand.js/database/db.json', $district: $('#addrDistrict'), $amphoe: $('#addrAmphoe'), $province: $('#addrProvince'), $zipcode: $('#addrZipcode') });
 
-  document.getElementById('dataForm').addEventListener('submit', async(e)=>{
-    e.preventDefault(); showLoader('กำลังบันทึกข้อมูลผู้ป่วย...');
-    const inT=document.getElementById('inType').value; const existingStatus=(document.getElementById('patientStatusStored').value||'').trim(); const statusToSave=(existingStatus==='ยอดยกมา')?'ยอดยกมา':(existingStatus||inT||'รับใหม่');
+document.getElementById('dataForm').addEventListener('submit', async(e)=>{
+    e.preventDefault(); 
     
+    // 1. เปลี่ยนสถานะปุ่มเป็นกำลังโหลด (แทนการบล็อกเต็มจอ)
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังบันทึก...';
+    btn.disabled = true;
+
+    const inT=document.getElementById('inType').value; const existingStatus=(document.getElementById('patientStatusStored').value||'').trim(); const statusToSave=(existingStatus==='ยอดยกมา')?'ยอดยกมา':(existingStatus||inT||'รับใหม่');
     let addrParts =[]; let l1 = document.getElementById('addrLine1').value.trim(); let dt = document.getElementById('addrDistrict').value.trim(); let am = document.getElementById('addrAmphoe').value.trim(); let pv = document.getElementById('addrProvince').value.trim(); let zp = document.getElementById('addrZipcode').value.trim();
     if(l1) addrParts.push(l1); if(dt && !dt.startsWith('ต.') && !dt.startsWith('แขวง')) dt = 'ต.' + dt; if(dt) addrParts.push(dt); if(am && !am.startsWith('อ.') && !am.startsWith('เขต')) am = 'อ.' + am; if(am) addrParts.push(am); if(pv && !pv.startsWith('จ.') && pv !== 'กรุงเทพมหานคร') pv = 'จ.' + pv; if(pv) addrParts.push(pv); if(zp) addrParts.push(zp);
     const finalAddress = addrParts.join(' '); document.getElementById('address').value = finalAddress;
@@ -1151,7 +1157,21 @@ document.addEventListener('DOMContentLoaded', ()=>{
     const formData={ rowId: document.getElementById('rowId').value, seq: document.getElementById('seq').value, patientStatus: statusToSave, prefix: document.getElementById('prefix').value, patientName: document.getElementById('patientName').value, gender: document.getElementById('gender').value, age: `${document.getElementById('ageYear').value} ปี ${document.getElementById('ageMonth').value} เดือน ${document.getElementById('ageDay').value} วัน`, hn: document.getElementById('hn').value, an: document.getElementById('an').value, ward: document.getElementById('ward').value, sai: document.getElementById('sai').value, sithi: document.getElementById('sithi').value, dx1: document.getElementById('dx1').value, dx2: document.getElementById('dx2').value, address: finalAddress };
     const iD=formatDateForSheet(document.getElementById('inDate').value); const iT=document.getElementById('inTime').value; const iDep=document.getElementById('inDept').value;
     if(inT==='รับใหม่') { formData.newMark=iD; formData.newTime=iT; formData.newDept=iDep; } else if(inT==='รับย้าย'){ formData.transferMark=iD; formData.transferTime=iT; formData.transferDept=iDep; } else { formData.referMark=iD; formData.referTime=iT; formData.referDept=iDep; }
-    try{ await callApi('processData',{ targetSheet:currentSheet, yearBE:currentYearBE, formData }); hideLoader(); showSuccess('บันทึกข้อมูลผู้ป่วยสำเร็จ'); loadDashboard(); new bootstrap.Tab(document.querySelector('button[data-bs-target="#list-pane"]')).show(); } catch(err){ hideLoader(); showError('เกิดข้อผิดพลาด: ' + err.message); }
+    
+    try{ 
+      await callApi('processData',{ targetSheet:currentSheet, yearBE:currentYearBE, formData }); 
+      showSuccess('บันทึกข้อมูลผู้ป่วยสำเร็จ'); 
+      // 2. สลับไปหน้าแรกทันที
+      new bootstrap.Tab(document.querySelector('button[data-bs-target="#list-pane"]')).show(); 
+      // 3. สั่งให้ตารางโหลดใหม่แบบเงียบๆ (Background Sync)
+      loadDashboard(true); 
+    } catch(err){ 
+      showError('เกิดข้อผิดพลาด: ' + err.message); 
+    } finally {
+      // 4. คืนค่าปุ่มกลับมาเหมือนเดิม
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }
   });
 
   callApi('getDropdownData').then(d=>{
@@ -1190,12 +1210,38 @@ async function saveDischarge(){
   const d=formatDateForSheet(date); const keepStatus=(disItem?.rawData?.[COL.STATUS]||disItem?.patientStatus||'').trim();
   const formData={ rowId, patientStatus:keepStatus, dcDate:'', transferOutDate:'', transferOut:'', referOutDate:'', referDestination:'', deathDate:'', abscondDate:'', refuseDate:'', fu:'', outTime:time, waitTime:waitMin };
   if(type==='dc') { formData.dcDate=d; formData.fu=document.getElementById('disFU').value; } if(type==='transfer'){ formData.transferOutDate=d; formData.transferOut=document.getElementById('transferDept')?.value||''; } if(type==='refer') { formData.referOutDate=d; formData.referDestination=document.getElementById('referDest')?.value||''; } if(type==='death') formData.deathDate=d; if(type==='abscond') formData.abscondDate=d; if(type==='refuse') formData.refuseDate=d;
-  showLoader('กำลังบันทึกการจำหน่าย...');
-  try{ await callApi('processData',{ targetSheet:currentSheet, yearBE:currentYearBE, formData }); bootstrap.Modal.getInstance(document.getElementById('dischargeModal'))?.hide(); hideLoader(); showSuccess('จำหน่ายผู้ป่วยเรียบร้อยแล้ว'); loadDashboard(); } catch(err){ hideLoader(); showError(err.toString()); }
+  
+  // เปลี่ยนปุ่มเป็นกำลังโหลด
+  const btn = document.querySelector('#dischargeModal .btn-primary');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังบันทึก...';
+  btn.disabled = true;
+
+  try{ 
+    await callApi('processData',{ targetSheet:currentSheet, yearBE:currentYearBE, formData }); 
+    bootstrap.Modal.getInstance(document.getElementById('dischargeModal'))?.hide(); 
+    showSuccess('จำหน่ายผู้ป่วยเรียบร้อยแล้ว'); 
+    loadDashboard(true); // โหลดแบบเงียบ
+  } catch(err){ 
+    showError(err.toString()); 
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
 }
+
 async function confirmCancelDischarge(item){
   if(!await appConfirm('ยืนยันยกเลิกจำหน่าย?', `ต้องการดึง ${item.patientName} กลับมา Active?`, 'warning', 'ใช่, ยกเลิกจำหน่าย', 'btn-danger')) return;
-  try{ showLoader('กำลังยกเลิกการจำหน่าย...'); await callApi('cancelDischarge',{ targetSheet:currentSheet, yearBE:currentYearBE, rowId:item.rowId }); hideLoader(); showSuccess('ยกเลิกจำหน่ายสำเร็จ ผู้ป่วยกลับมา Active แล้ว'); loadDashboard(); } catch(err){ hideLoader(); showError(err.toString()); }
+  
+  // โชว์แจ้งเตือน Toast มุมจอแทนการบล็อกจอ
+  notyf.success('กำลังยกเลิกการจำหน่าย...'); 
+  try{ 
+    await callApi('cancelDischarge',{ targetSheet:currentSheet, yearBE:currentYearBE, rowId:item.rowId }); 
+    showSuccess('ผู้ป่วยกลับมา Active แล้ว'); 
+    loadDashboard(true); // โหลดแบบเงียบ
+  } catch(err){ 
+    showError(err.toString()); 
+  }
 }
 document.addEventListener('keydown', e=>{ if(e.key==='Enter'){ const modal=document.getElementById('dischargeModal'); if(modal&&modal.classList.contains('show')){ e.preventDefault(); saveDischarge(); } } });
 
@@ -1381,19 +1427,16 @@ async function saveQaInc(fk){
       noteVal = details.join(' | ') + (noteVal ? " | Note: " + noteVal : "");
   }
 
-  showLoader('กำลังบันทึกเหตุการณ์...');
-  try{
-    await callApi('ensureIncidentLog');
-    await callApi('addIncident',{sheetName:currentSheet,yearBE:currentYearBE,eventDate:dateThai,hn:opt.dataset.hn||'',an:opt.dataset.an||'',eventType:eventType,value:1,grade:gradeVal,level:lvEl?lvEl.value:'',note:noteVal,rowIdRef:opt.value||''});
-    hideLoader(); showSuccess('บันทึกเหตุการณ์สำเร็จ');
-    if(ntEl) ntEl.value=''; _selG[fk]=''; loadQaCards();
-  }catch(err){hideLoader(); showError(err.message);}
-}
-
 async function delQaInc(rowId){
   if(!await appConfirm('ลบรายการนี้?', 'ต้องการลบเหตุการณ์นี้ใช่หรือไม่?', 'warning', 'ลบ', 'btn-danger')) return;
-  showLoader('กำลังลบเหตุการณ์...');
-  try{ await callApi('deleteIncident',{rowId:rowId}); hideLoader(); showSuccess('ลบเหตุการณ์สำเร็จ'); loadQaCards(); }catch(err){ hideLoader(); showError(err.message); }
+  notyf.success('กำลังลบเหตุการณ์...');
+  try{ 
+    await callApi('deleteIncident',{rowId:rowId}); 
+    showSuccess('ลบเหตุการณ์สำเร็จ'); 
+    loadQaCards(); 
+  } catch(err){ 
+    showError(err.message); 
+  }
 }
 
 function renderGauge(elId,value,label,color){var el=document.getElementById(elId);if(!el) return;var p=Math.min(100,Math.max(0,value||0)),r=40,ci=2*Math.PI*r,off=ci-(p/100)*ci*0.75;el.innerHTML='<svg width="100" height="80" viewBox="0 0 100 90"><path d="M 10 72 A 40 40 0 1 1 90 72" fill="none" stroke="#e2e8f0" stroke-width="7" stroke-linecap="round"/><path d="M 10 72 A 40 40 0 1 1 90 72" fill="none" stroke="'+color+'" stroke-width="7" stroke-linecap="round" stroke-dasharray="'+(ci*0.75)+'" stroke-dashoffset="'+off+'" style="transition:stroke-dashoffset .8s"/><text x="50" y="56" text-anchor="middle" style="font-size:20px;font-weight:900;fill:#0f172a;font-family:Sarabun">'+p+'</text><text x="50" y="68" text-anchor="middle" style="font-size:8px;fill:#64748b;font-weight:700;font-family:Sarabun">%</text></svg><div class="gauge-label">'+label+'</div>';}
