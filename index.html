@@ -202,7 +202,7 @@
 </div>
 
 
-<!-- ══════════════════ LOGIN OVERLAY ══════════════════ -->
+<!-- ══════════════════ LOGIN OVERLAY (New Inline Design) ══════════════════ -->
 <div id="loginOverlay">
   <div class="login-card">
     <div class="text-center mb-4">
@@ -214,11 +214,15 @@
         <label class="form-label fw-bold" style="font-size:13px;">รหัสพยาบาล (ID)</label>
         <input type="text" id="loginId" class="form-control" placeholder="เช่น admin" required autocomplete="off">
       </div>
-      <div class="mb-4">
+      <div class="mb-3">
         <label class="form-label fw-bold" style="font-size:13px;">รหัสผ่าน (PIN)</label>
         <input type="password" id="loginPin" class="form-control" placeholder="****" required>
       </div>
-      <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold" style="font-size:15px; padding:10px;">
+      
+      <!-- แจ้งเตือนรหัสผิดแบบ Inline (เนียนไปกับกรอบ) -->
+      <div id="loginErrorMsg" class="text-danger fw-bold text-center mb-3" style="font-size:13px; display:none; background:#fef2f2; border-radius:8px; padding:8px;"></div>
+      
+      <button type="submit" id="loginBtn" class="btn btn-primary w-100 rounded-pill fw-bold" style="font-size:15px; padding:10px; transition: all 0.3s;">
         <i class="bi bi-box-arrow-in-right me-2"></i>เข้าสู่ระบบ
       </button>
     </form>
@@ -744,27 +748,52 @@ async function checkAuth() {
 
 document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const id = document.getElementById('loginId').value.trim();
-  const pin = document.getElementById('loginPin').value.trim();
-  
-  document.getElementById('loginOverlay').style.display = 'none';
-  document.getElementById('mainApp').style.display = 'block';
-  showLoader('กำลังตรวจสอบรหัสผ่าน...');
+  const idInput = document.getElementById('loginId');
+  const pinInput = document.getElementById('loginPin');
+  const btn = document.getElementById('loginBtn');
+  const errorMsg = document.getElementById('loginErrorMsg');
+
+  const id = idInput.value.trim();
+  const pin = pinInput.value.trim();
+
+  // Lock UI
+  errorMsg.style.display = 'none';
+  idInput.disabled = true;
+  pinInput.disabled = true;
+  btn.disabled = true;
+  const originalBtnText = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังตรวจสอบ...';
   
   try {
     const res = await callApi('login', { username: id, pin: pin });
     currentUser = { id: res.nurseId, name: res.nurseName, role: res.role, time: new Date().getTime() };
     localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
-    document.getElementById('nurseIdText').innerText = currentUser.name;
     
-    showLoader('รหัสถูกต้อง! กำลังเตรียมข้อมูล...');
-    await initSheets(); 
-    hideLoader();
+    btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>สำเร็จ!';
+    btn.classList.replace('btn-primary', 'btn-success');
+    
+    setTimeout(async () => {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('nurseIdText').innerText = currentUser.name;
+        showLoader('กำลังเตรียมข้อมูลกระดานผู้ป่วย...');
+        await initSheets(); 
+        hideLoader();
+    }, 500);
+
   } catch(err) {
-    document.getElementById('loginOverlay').style.display = 'flex';
-    document.getElementById('mainApp').style.display = 'none';
-    hideLoader();
-    appConfirm('เข้าสู่ระบบไม่สำเร็จ', err.message, 'error', 'ลองอีกครั้ง', 'btn-danger', false);
+    // Error unlock UI
+    idInput.disabled = false;
+    pinInput.disabled = false;
+    btn.disabled = false;
+    btn.innerHTML = originalBtnText;
+    
+    errorMsg.innerText = err.message || 'รหัสพยาบาล หรือ PIN ไม่ถูกต้อง';
+    errorMsg.style.display = 'block';
+    
+    pinInput.value = '';
+    pinInput.focus();
+    showError('เข้าสู่ระบบไม่สำเร็จ');
   }
 });
 
@@ -1269,7 +1298,7 @@ function renderAllCards(){
   html += mkAcc('acc16', '⚠️', 'ข้อ 16: พลัดตกหกล้ม (Fall)', mkInner('s16', b16, ['FALL'], false, false), '#d97706');
 
   var b17 = `<div class="qa-status-inline" style="background:${r1k(vMedErr)<5?'#ecfdf5':'#fef2f2'}; border:1px solid ${r1k(vMedErr)<5?'#6ee7b7':'#fca5a5'};">จำนวนครั้ง: <span style="font-size:18px; color:${r1k(vMedErr)<5?'#059669':'#dc2626'};">${vMedErr}</span> | อัตรา ${fmtR(r1k(vMedErr))}/1000</div>` + itbl(byType('MED_ERROR'), false, false);
-  html += mkAcc('acc17', '💊', 'ข้อ 17: คลาดเคลื่อนยา (Med Error)', mkInner('s17', b17,['MED_ERROR'], false, false), '#dc2626');
+  html += mkAcc('acc17', '💊', 'ข้อ 17: คลาดเคลื่อนยา (Med Error)', mkInner('s17', b17, ['MED_ERROR'], false, false), '#dc2626');
 
   var b18 = `<div class="d-flex align-items-center gap-3 mb-3"><div style="width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#0891b2,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff">${escapeHtml(ghiLv)}</div><div><b>ระดับ ${escapeHtml(ghiLv)}</b><div style="font-size:10px;color:#64748b">ล่าสุด</div></div></div>` + itbl(ghi, false, true);
   html += mkAcc('acc18', '📋', 'ข้อ 18: GHI อุบัติการณ์เฉพาะโรค', mkInner('s18', b18, ['GHI'], false, true), '#0891b2');
