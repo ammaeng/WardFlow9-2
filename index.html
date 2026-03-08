@@ -1191,14 +1191,37 @@ let qaIncidents=[], qaDeviceTags=[], qaReport=null, qaOpenForms={};
 function switchQaTab(n){[2,3].forEach(function(i){var el=document.getElementById('qaPane'+i);if(el) el.style.display=(i===n)?'':'none';document.getElementById('qaTab'+i+'Btn')?.classList.toggle('active',i===n);});if(n===2) loadQaCards();}
 function openQaTab(){switchQaTab(2);}
 
-async function loadQaCards(){
-  if(!currentSheet) return; document.getElementById('qaCardMonthLabel').innerText='เดือน: '+currentSheet; 
-  document.getElementById('qaCardGrid').innerHTML='<div class="loading-spinner"><div class="spinner-glow" style="width:2rem;height:2rem;"></div> <span class="ms-3">กำลังโหลด...</span></div>';
-  try{
-    var results=await Promise.all([callApi('getQualityReport',{sheetName:currentSheet,yearBE:currentYearBE}),callApi('getIncidentsByMonth',{sheetName:currentSheet}),callApi('getDeviceTagsByMonth',{sheetName:currentSheet}).catch(function(){return[];})]);
-    qaReport=results[0];qaIncidents=results[1]||[];qaDeviceTags=results[2]||[];
-    document.getElementById('qaCardPD').innerText='วันนอน: '+(qaReport.patientDays||0); document.getElementById('qaCardPT').innerText='ผู้ป่วย: '+(qaReport.totalPatients||0); renderAllCards();
-  }catch(err){document.getElementById('qaCardGrid').innerHTML='<div class="text-danger p-3">'+escapeHtml(err.message)+'</div>';}
+async function loadQaCards() {
+  if (!currentSheet) return;
+  document.getElementById('qaCardMonthLabel').innerText = 'เดือน: ' + currentSheet;
+  document.getElementById('qaCardGrid').innerHTML = '<div class="loading-spinner"><div class="spinner-glow" style="width:2rem;height:2rem;"></div> <span class="ms-3">กำลังโหลด...</span></div>';
+  
+  try {
+    var results = await Promise.all([
+      callApi('getQualityReport', { sheetName: currentSheet, yearBE: currentYearBE }),
+      callApi('getIncidentsByMonth', { sheetName: currentSheet }),
+      callApi('getDeviceTagsByMonth', { sheetName: currentSheet }).catch(function() { return []; })
+    ]);
+    
+    qaReport = results[0];
+    
+    // ✅ จุดที่แก้ไข: กรอง incident ให้เหลือเฉพาะเดือนปัจจุบันเท่านั้น
+    qaIncidents = (results[1] || []).filter(function(x) {
+        return String(x.sheetName).trim() === String(currentSheet).trim();
+    });
+    
+    // ✅ จุดที่แก้ไข: กรอง deviceTags ให้เหลือเฉพาะเดือนปัจจุบัน (ถ้ามี)
+    qaDeviceTags = (results[2] || []).filter(function(t) {
+        return String(t.sheetName || "").trim() === String(currentSheet).trim();
+    });
+
+    document.getElementById('qaCardPD').innerText = 'วันนอน: ' + (qaReport.patientDays || 0);
+    document.getElementById('qaCardPT').innerText = 'ผู้ป่วย: ' + (qaReport.totalPatients || 0);
+    
+    renderAllCards();
+  } catch(err) {
+    document.getElementById('qaCardGrid').innerHTML = '<div class="text-danger p-3">' + escapeHtml(err.message) + '</div>';
+  }
 }
 
 function renderAllCards(){
