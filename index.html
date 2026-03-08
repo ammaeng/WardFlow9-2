@@ -230,13 +230,10 @@
       <div class="text-muted" style="font-size:13px;">ระบบบริหารจัดการหอผู้ป่วยอัจฉริยะ</div>
     </div>
     <form id="loginForm">
+      <!-- ลบช่อง ID ออก -->
       <div class="mb-3">
-        <label class="form-label fw-bold" style="font-size:13px;">รหัสพยาบาล (ID)</label>
-        <input type="text" id="loginId" class="form-control" placeholder="เช่น admin" required autocomplete="off">
-      </div>
-      <div class="mb-3">
-        <label class="form-label fw-bold" style="font-size:13px;">รหัสผ่าน (PIN)</label>
-        <input type="password" id="loginPin" class="form-control" placeholder="****" required>
+        <label class="form-label fw-bold" style="font-size:13px;">รหัส PIN เข้าใช้งาน</label>
+        <input type="password" id="loginPin" class="form-control" placeholder="กรอกรหัสผ่าน 4 หลัก" required inputmode="numeric">
       </div>
       <div id="loginErrorMsg" class="text-danger fw-bold text-center mb-3" style="font-size:13px; display:none; background:#fef2f2; border-radius:8px; padding:8px;"></div>
       <button type="submit" id="loginBtn" class="btn btn-primary w-100 rounded-pill fw-bold" style="font-size:15px; padding:10px; transition: all 0.3s;">
@@ -543,21 +540,45 @@ async function checkAuth() {
 
 document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const idInput = document.getElementById('loginId'); const pinInput = document.getElementById('loginPin'); const btn = document.getElementById('loginBtn'); const errorMsg = document.getElementById('loginErrorMsg');
-  const id = idInput.value.trim(); const pin = pinInput.value.trim();
-  errorMsg.style.display = 'none'; idInput.disabled = true; pinInput.disabled = true; btn.disabled = true;
-  const originalBtnText = btn.innerHTML; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังตรวจสอบ...';
+  const pinInput = document.getElementById('loginPin'); 
+  const btn = document.getElementById('loginBtn'); 
+  const errorMsg = document.getElementById('loginErrorMsg');
+  
+  const pin = pinInput.value.trim();
+  errorMsg.style.display = 'none'; 
+  pinInput.disabled = true; 
+  btn.disabled = true;
+  
+  const originalBtnText = btn.innerHTML; 
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังตรวจสอบ...';
+  
   try {
-    const res = await callApi('login', { username: id, pin: pin });
-    currentUser = { id: res.nurseId, name: res.nurseName, role: res.role, time: new Date().getTime() }; localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
-    btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>สำเร็จ!'; btn.classList.replace('btn-primary', 'btn-success');
-    setTimeout(async () => { document.getElementById('loginOverlay').style.display = 'none'; document.getElementById('mainApp').style.display = 'block'; document.getElementById('nurseIdText').innerText = currentUser.name;
+    // ส่งแค่ PIN ไปให้ Server ตรวจสอบ
+    const res = await callApi('login', { pin: pin });
+    
+    currentUser = { id: res.nurseId, name: res.nurseName, role: res.role, time: new Date().getTime() }; 
+    localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
+    
+    btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>ยินดีต้อนรับ!'; 
+    btn.classList.replace('btn-primary', 'btn-success');
+    
+    setTimeout(async () => { 
+      document.getElementById('loginOverlay').style.display = 'none'; 
+      document.getElementById('mainApp').style.display = 'block'; 
+      document.getElementById('nurseIdText').innerText = currentUser.name;
       showLoader('กำลังเตรียมข้อมูลกระดานผู้ป่วย...');
-      await initAppOptimized(); // 🚀
+      await initAppOptimized();
       hideLoader();
     }, 500);
   } catch(err) {
-    idInput.disabled = false; pinInput.disabled = false; btn.disabled = false; btn.innerHTML = originalBtnText; errorMsg.innerText = err.message || 'รหัสพยาบาล หรือ PIN ไม่ถูกต้อง'; errorMsg.style.display = 'block'; pinInput.value = ''; pinInput.focus(); showError('เข้าสู่ระบบไม่สำเร็จ');
+    pinInput.disabled = false; 
+    btn.disabled = false; 
+    btn.innerHTML = originalBtnText; 
+    errorMsg.innerText = err.message || 'PIN ไม่ถูกต้อง'; 
+    errorMsg.style.display = 'block'; 
+    pinInput.value = ''; 
+    pinInput.focus(); 
+    showError('เข้าสู่ระบบไม่สำเร็จ');
   }
 });
 
