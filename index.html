@@ -1355,43 +1355,18 @@ function printPressureUlcerReport() {
     win.document.close();
 }
 /* ════════════════════════════════════════════════
-   โค้ดส่วนที่ตกหล่น (DX Tags & Print Report)
+   ระบบ Dx Tags & Print (ส่วนที่ตกหล่น)
 ════════════════════════════════════════════════ */
-
-function commitCurrentToken(which){ 
-  const input=document.getElementById(which+'Input'); if(!input) return; 
-  const raw=input.value,sugList=dxTagState[which].suggest||[],sel=dxTagState[which].selected??0; 
-  if(sugList.length>0&&normalizeDxToken(raw)&&sel>=0){chooseSuggest(which,sel);return;} 
-  splitDxList(raw).map(normalizeDxToken).filter(Boolean).forEach(p=>addDxTag(which,p)); 
-  input.value=''; setSuggest(which,[]); document.getElementById(which+'Suggest').style.display='none'; 
-}
-
-function initDxTagInput(which){
-  const input=document.getElementById(which+'Input'); if(!input) return;
-  input.addEventListener('input',()=>{
-    const q=normalizeDxToken(input.value).replace(/;.*$/,'');
-    if(!q||q.length<1){setSuggest(which,[]);return;}
-    setSuggest(which,computeSuggest(q));
-  });
-  input.addEventListener('keydown',e=>{
-    const hasSug=(dxTagState[which].suggest||[]).length>0;
-    if(e.key==='Enter'||e.key===';'){e.preventDefault();commitCurrentToken(which);return;}
-    if(hasSug&&(e.key==='ArrowDown'||e.key==='ArrowUp')){
-      e.preventDefault(); const n=dxTagState[which].suggest.length;
-      dxTagState[which].selected=e.key==='ArrowDown'?((dxTagState[which].selected??0)+1)%n:((dxTagState[which].selected??0)-1+n)%n;
-      renderSuggest(which); return;
-    }
-    if(e.key==='Backspace'&&!input.value&&dxTagState[which].tags.length>0) removeDxTag(which,dxTagState[which].tags.length-1);
-  });
-  input.addEventListener('blur',()=>{ setTimeout(()=>{ const el=document.getElementById(which+'Suggest'); if(el) el.style.display='none'; },120); });
-}
-
-function loadDxTagsFromHidden(which){ 
-  const hidden=document.getElementById(which); 
-  if(!hidden) return; 
-  dxTagState[which].tags=splitToTags(hidden.value); 
-  renderDxTags(which); 
-}
+function renderDxTags(which){ const box=document.getElementById(which+'Box'),input=document.getElementById(which+'Input'),hidden=document.getElementById(which); if(!box||!input||!hidden) return; [...box.querySelectorAll('.dx-tag')].forEach(el=>el.remove()); dxTagState[which].tags.forEach((t,i)=>{ const tag=document.createElement('span'); tag.className='dx-tag'+(i===0?' primary':''); tag.innerHTML=`<span>${escapeHtml(t)}</span><span class="x" title="ลบ">×</span>`; tag.querySelector('.x').onclick=ev=>{ev.stopPropagation();removeDxTag(which,i);}; box.insertBefore(tag,input); }); hidden.value=tagsToString(dxTagState[which].tags); }
+function addDxTag(which,token){ const t=normalizeDxToken(token); if(!t||t.length<2) return; if(!dxTagState[which].tags.some(x=>x.toLowerCase()===t.toLowerCase())) dxTagState[which].tags.push(t); dxTagState[which].activeIdx=-1; renderDxTags(which); }
+function removeDxTag(which,idx){ dxTagState[which].tags.splice(idx,1); dxTagState[which].activeIdx=-1; renderDxTags(which); }
+function setSuggest(which,list){ dxTagState[which].suggest=list||[]; dxTagState[which].selected=0; renderSuggest(which); }
+function renderSuggest(which){ const sug=document.getElementById(which+'Suggest'),input=document.getElementById(which+'Input'); if(!sug||!input) return; const q=normalizeDxToken(input.value),list=dxTagState[which].suggest; if(!q||list.length===0){ sug.style.display='none'; sug.innerHTML=''; return; } sug.style.display='block'; sug.innerHTML=list.map((t,i)=>`<div class="item ${i===dxTagState[which].selected?'active':''}" data-i="${i}">${escapeHtml(t)}<div class="muted">กด Enter</div></div>`).join(''); sug.querySelectorAll('.item').forEach(el=>{ el.onmousedown=ev=>{ev.preventDefault();chooseSuggest(which,parseInt(el.getAttribute('data-i'),10)||0);}; }); }
+function chooseSuggest(which,index){ const hit=(dxTagState[which].suggest||[])[index]; if(!hit) return; addDxTag(which,hit); document.getElementById(which+'Input').value=''; setSuggest(which,[]); document.getElementById(which+'Suggest').style.display='none'; }
+function computeSuggest(q){ const key=q.toLowerCase(),a=DX_OPTIONS.filter(x=>x.toLowerCase().startsWith(key)),b=DX_OPTIONS.filter(x=>!a.includes(x)&&x.toLowerCase().includes(key)); return [...a,...b].slice(0,12); }
+function commitCurrentToken(which){ const input=document.getElementById(which+'Input'); if(!input) return; const raw=input.value,sugList=dxTagState[which].suggest||[],sel=dxTagState[which].selected??0; if(sugList.length>0&&normalizeDxToken(raw)&&sel>=0){chooseSuggest(which,sel);return;} splitDxList(raw).map(normalizeDxToken).filter(Boolean).forEach(p=>addDxTag(which,p)); input.value=''; setSuggest(which,[]); document.getElementById(which+'Suggest').style.display='none'; }
+function initDxTagInput(which){ const input=document.getElementById(which+'Input'); if(!input) return; input.addEventListener('input',()=>{ const q=normalizeDxToken(input.value).replace(/;.*$/,''); if(!q||q.length<1){setSuggest(which,[]);return;} setSuggest(which,computeSuggest(q)); }); input.addEventListener('keydown',e=>{ const hasSug=(dxTagState[which].suggest||[]).length>0; if(e.key==='Enter'||e.key===';'){e.preventDefault();commitCurrentToken(which);return;} if(hasSug&&(e.key==='ArrowDown'||e.key==='ArrowUp')){ e.preventDefault(); const n=dxTagState[which].suggest.length; dxTagState[which].selected=e.key==='ArrowDown'?((dxTagState[which].selected??0)+1)%n:((dxTagState[which].selected??0)-1+n)%n; renderSuggest(which); return; } if(e.key==='Backspace'&&!input.value&&dxTagState[which].tags.length>0) removeDxTag(which,dxTagState[which].tags.length-1); }); input.addEventListener('blur',()=>{ setTimeout(()=>{ const el=document.getElementById(which+'Suggest'); if(el) el.style.display='none'; },120); }); }
+function loadDxTagsFromHidden(which){ const hidden=document.getElementById(which); if(!hidden) return; dxTagState[which].tags=splitToTags(hidden.value); renderDxTags(which); }
 
 function printOfficialReport(){ 
   if(!currentReportCtx) return; 
