@@ -34,6 +34,15 @@
   <script src="https://earthchie.github.io/jquery.Thailand.js/jquery.Thailand.js/dist/jquery.Thailand.min.js"></script>
 
   <style>
+    /* ── Smart Time Input ── */
+.smart-time-wrap { position: relative; }
+.smart-time-input { font-size: 18px; font-weight: 800; letter-spacing: 2px; text-align: center; border: 2px solid #e2e8f0; border-radius: 12px; height: 46px; transition: all 0.2s; }
+.smart-time-input:focus { border-color: #0d6efd; box-shadow: 0 0 0 4px rgba(13,110,253,0.15); }
+.quick-time-bar { display: flex; gap: 4px; margin-top: 6px; overflow-x: auto; padding-bottom: 2px; }
+.quick-time-bar::-webkit-scrollbar { display: none; }
+.qt-btn { flex: 0 0 auto; background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+.qt-btn:hover, .qt-btn:active { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
+.qt-btn.now { background: #fee2e2; border-color: #f87171; color: #b91c1c; }
     * { font-family: 'Sarabun', sans-serif !important; }
     body { background: #f4f7f6; color: #263238; }
     .card { border: 0; border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
@@ -339,7 +348,22 @@
     <div class="tab-pane fade" id="form-pane">
       <form id="dataForm">
         <input type="hidden" id="rowId"><input type="hidden" id="patientStatusStored">
-        <div class="card mb-3"><div class="p-3 border-bottom"><div class="section-title">1) การรับเข้า</div></div><div class="p-3 row g-2"><div class="col-4 col-md-2"><label class="form-label">ลำดับ</label><input type="text" class="form-control bg-light" id="seq" readonly></div><div class="col-8 col-md-3"><label class="form-label">ประเภท</label><select class="form-select" id="inType"><option value="รับใหม่">รับใหม่</option><option value="รับย้าย">รับย้าย</option><option value="รับ Refer">รับ Refer</option></select></div><div class="col-6 col-md-3"><label class="form-label">วันที่รับ *</label><input type="date" class="form-control" id="inDate" required onchange="calculateLOSPreview()"></div><div class="col-6 col-md-2"><label class="form-label">เวลา (24 ชม.) *</label><div class="input-group"><input type="text" class="form-control" id="inTime"><button class="btn btn-outline-secondary" type="button" onclick="setCurrentTime()">NOW</button></div></div><div class="col-12 col-md-2"><label class="form-label">ต้นทาง</label><input type="text" class="form-control" id="inDept"></div></div></div>
+        <div class="card mb-3"><div class="p-3 border-bottom"><div class="section-title">1) การรับเข้า</div></div><div class="p-3 row g-2"><div class="col-4 col-md-2"><label class="form-label">ลำดับ</label><input type="text" class="form-control bg-light" id="seq" readonly></div><div class="col-8 col-md-3"><label class="form-label">ประเภท</label><select class="form-select" id="inType"><option value="รับใหม่">รับใหม่</option><option value="รับย้าย">รับย้าย</option><option value="รับ Refer">รับ Refer</option></select></div><div class="col-6 col-md-3"><label class="form-label">วันที่รับ *</label><input type="date" class="form-control" id="inDate" required onchange="calculateLOSPreview()"></div><div class="col-6 col-md-2">
+<label class="form-label text-primary fw-bold">เวลา (24 ชม.) *</label>
+<div class="smart-time-wrap">
+  <!-- inputmode="numeric" จะเรียกแป้นตัวเลขบนมือถือ -->
+  <input type="text" id="inTime" class="form-control smart-time-input" 
+         placeholder="00:00" maxlength="5" inputmode="numeric" 
+         oninput="formatSmartTime(this)" autocomplete="off">
+  
+  <div class="quick-time-bar">
+    <button type="button" class="qt-btn now" onclick="setQuickTime('inTime', 'NOW')">NOW</button>
+    <button type="button" class="qt-btn" onclick="setQuickTime('inTime', '08:00')">08:00 (เช้า)</button>
+    <button type="button" class="qt-btn" onclick="setQuickTime('inTime', '16:00')">16:00 (บ่าย)</button>
+    <button type="button" class="qt-btn" onclick="setQuickTime('inTime', '00:00')">00:00 (ดึก)</button>
+  </div>
+</div>          
+          <div class="col-12 col-md-2"><label class="form-label">ต้นทาง</label><input type="text" class="form-control" id="inDept"></div></div></div>
         <div class="card mb-3"><div class="p-3 border-bottom"><div class="section-title">2) ข้อมูลผู้ป่วย</div></div><div class="p-3 row g-2"><div class="col-12 col-md-6"><label class="form-label">ชื่อ-นามสกุล *</label><div class="input-group"><select id="prefix" class="form-select" style="max-width:90px;"><option value="นาย">นาย</option><option value="นาง">นาง</option><option value="น.ส.">น.ส.</option><option value="ด.ช.">ด.ช.</option><option value="ด.ญ.">ด.ญ.</option></select><input type="text" class="form-control" id="patientName" required></div></div><div class="col-6 col-md-3"><label class="form-label">เพศ *</label><select id="gender" class="form-select" required><option value="ชาย">ชาย</option><option value="หญิง">หญิง</option></select></div><div class="col-6 col-md-3"><label class="form-label">อายุ (ป/ด/ว)</label><div class="input-group"><input type="number" id="ageYear" class="form-control" value="0"><input type="number" id="ageMonth" class="form-control" value="0"><input type="number" id="ageDay" class="form-control" value="0"></div></div><div class="col-6 col-md-3"><label class="form-label">HN *</label><input type="text" class="form-control" id="hn" required onblur="formatHNAN('hn')"></div><div class="col-6 col-md-3"><label class="form-label">AN *</label><input type="text" class="form-control" id="an" required onblur="checkAN()"></div><div class="col-6 col-md-3"><label class="form-label">แผนก</label><select id="ward" class="form-select"></select></div><div class="col-6 col-md-3"><label class="form-label">สาย</label><select id="sai" class="form-select"></select></div><div class="col-12 col-md-4"><label class="form-label">สิทธิการรักษา</label><select id="sithi" class="form-select"></select></div><div class="col-6 col-md-4"><label class="form-label">Dx. แรก *</label><div class="position-relative"><div class="dx-tagbox" id="dx1Box" onclick="document.getElementById('dx1Input').focus()"><input type="text" id="dx1Input" class="dx-taginput" placeholder="พิมพ์แล้วกด Enter" autocomplete="off"></div><div class="dx-suggest" id="dx1Suggest" style="display:none;"></div></div><input type="hidden" id="dx1"></div><div class="col-6 col-md-4"><label class="form-label">Dx. หลัง</label><div class="position-relative"><div class="dx-tagbox" id="dx2Box" onclick="document.getElementById('dx2Input').focus()"><input type="text" id="dx2Input" class="dx-taginput" placeholder="พิมพ์แล้วกด Enter" autocomplete="off"></div><div class="dx-suggest" id="dx2Suggest" style="display:none;"></div></div><input type="hidden" id="dx2"></div><div class="col-12 col-md-12 mt-2"><div class="p-2 border rounded bg-light"><label class="form-label fw-bold text-primary mb-1"><i class="bi bi-geo-alt-fill"></i> ที่อยู่ผู้ป่วย (พิมพ์ตำบล, อำเภอ หรือรหัสไปรษณีย์เพื่อค้นหาอัตโนมัติ)</label><div class="row g-2"><div class="col-12 col-md-4"><label class="form-label" style="font-size:12px;">บ้านเลขที่/หมู่/ถนน</label><input type="text" class="form-control form-control-sm" id="addrLine1"></div><div class="col-6 col-md-2"><label class="form-label" style="font-size:12px;">ตำบล/แขวง</label><input type="text" class="form-control form-control-sm" id="addrDistrict"></div><div class="col-6 col-md-2"><label class="form-label" style="font-size:12px;">อำเภอ/เขต</label><input type="text" class="form-control form-control-sm" id="addrAmphoe"></div><div class="col-6 col-md-2"><label class="form-label" style="font-size:12px;">จังหวัด</label><input type="text" class="form-control form-control-sm" id="addrProvince"></div><div class="col-6 col-md-2"><label class="form-label" style="font-size:12px;">รหัสไปรษณีย์</label><input type="text" class="form-control form-control-sm" id="addrZipcode"></div></div></div><input type="hidden" id="address"></div>
         <!-- ═══ ข้อมูลติดต่อ (เบอร์โทรศัพท์) ═══ -->
 <div class="col-12 mt-2">
@@ -1402,6 +1426,48 @@ function printOfficialReport(){
   win.document.close(); 
   win.focus(); 
   setTimeout(()=>win.print(),500); 
+}
+
+  // ฟังก์ชันเติม : อัตโนมัติและดักการพิมพ์ผิด
+function formatSmartTime(el) {
+  // ลบตัวอักษรที่ไม่ใช่ตัวเลขออกทั้งหมด
+  let val = el.value.replace(/\D/g, ''); 
+  
+  if (val.length >= 3) {
+    let h = val.substring(0, 2);
+    let m = val.substring(2, 4);
+    
+    // ดักไม่ให้ชั่วโมงเกิน 23
+    if (parseInt(h, 10) > 23) h = '23'; 
+    
+    // ดักไม่ให้นาทีเกิน 59 (เช็คเมื่อพิมพ์นาทีครบ 2 ตัว)
+    if (m.length === 2 && parseInt(m, 10) > 59) m = '59'; 
+    
+    el.value = h + ':' + m;
+  } else {
+    el.value = val; // ถ้าเพิ่งพิมพ์ 1-2 ตัวแรก ปล่อยผ่าน
+  }
+}
+
+// ฟังก์ชันสำหรับปุ่ม Quick Time
+function setQuickTime(inputId, timeVal) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  
+  if (timeVal === 'NOW') {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    el.value = `${hh}:${mm}`;
+  } else {
+    el.value = timeVal;
+  }
+  
+  // ทำให้ช่องเด้งรับ Focus เพื่อให้ User รู้สึกว่าค่าถูกเปลี่ยนแล้ว
+  el.focus(); 
+  
+  // ขยับเคอร์เซอร์ไปท้ายสุด
+  setTimeout(() => el.setSelectionRange(5, 5), 10);
 }
 
 window.showFullReport=showFullReport;
