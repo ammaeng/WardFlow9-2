@@ -682,8 +682,18 @@ callApi('getDropdownData').then(d=>{
   const inTimeEl=document.getElementById('inTime'); if(inTimeEl) inTimeEl.addEventListener('blur',function(){ this.value=formatTimeForInput(this.value); });
 });
     
-    DX_OPTIONS=(d.dx||
-async function checkAN(){ formatHNAN('an'); const anValue=document.getElementById('an').value, rowId=document.getElementById('rowId').value; if(!rowId&&anValue){ try{ const isDup=await callApi('checkDuplicateAN',{ targetSheet:currentSheet, yearBE:currentYearBE, an:anValue }); if(isDup) showError(`พบ AN ซ้ำ! AN ${anValue} มีอยู่แล้ว`); } catch(err){} } }
+DX_OPTIONS=(d.dx||[]).map(x=>String(x)).filter(Boolean);
+    initDxTagInput('dx1'); initDxTagInput('dx2'); loadDxTagsFromHidden('dx1'); loadDxTagsFromHidden('dx2');
+  });
+
+  bindTableEvents(); lockOutcomeFieldsInMainForm();
+  const disTypeEl=document.getElementById('disType'); if(disTypeEl) disTypeEl.addEventListener('change',toggleDisFields);
+  const disModalEl=document.getElementById('dischargeModal'); if(disModalEl) disModalEl.addEventListener('shown.bs.modal',()=>{ toggleDisFields(); setTimeout(()=>document.getElementById('disType')?.focus?.(),150); });
+  setInterval(()=>{ const el=document.getElementById('currentTime'); if(el) el.innerText=new Date().toLocaleString('th-TH',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}); },1000);
+  const inTimeEl=document.getElementById('inTime'); if(inTimeEl) inTimeEl.addEventListener('blur',function(){ this.value=formatTimeForInput(this.value); });
+});
+  
+  async function checkAN(){ formatHNAN('an'); const anValue=document.getElementById('an').value, rowId=document.getElementById('rowId').value; if(!rowId&&anValue){ try{ const isDup=await callApi('checkDuplicateAN',{ targetSheet:currentSheet, yearBE:currentYearBE, an:anValue }); if(isDup) showError(`พบ AN ซ้ำ! AN ${anValue} มีอยู่แล้ว`); } catch(err){} } }
 
 /* ════════════════════════════════════════════════
    DISCHARGE
