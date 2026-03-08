@@ -276,10 +276,13 @@
 <!-- ── 1. สรุปยอดแบบสมการ Census ── -->
   <div class="row g-2 mb-3">
     <div class="col-12">
-      <div class="card p-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="card p-3 shadow-sm border-0">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
           <div class="section-title text-dark"><i class="bi bi-clipboard-data me-2"></i>สรุปยอดผู้ป่วย (Census)</div>
-          <span class="chip bg-light border" id="sheetStatusChip">-</span>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-dark rounded-pill" onclick="exportCSV('ALL')"><i class="bi bi-download me-1"></i>Export CSV</button>
+            <span class="chip bg-light border" id="sheetStatusChip">-</span>
+          </div>
         </div>
         <div class="row g-2 text-center align-items-center justify-content-center">
           <div class="col-4 col-md-2"><div class="mini"><div class="label">ยอดยกมา</div><p class="value text-secondary" id="sumCarry">0</p></div></div>
@@ -291,6 +294,7 @@
           <div class="col-6 col-md-2"><div class="mini bg-success bg-opacity-10"><div class="label text-success fw-bold">Active ปัจจุบัน</div><p class="value text-success" id="sumActive">0</p></div></div>
           <div class="col-6 col-md-2"><div class="mini"><div class="label text-danger">จำหน่ายแล้ว (D/C)</div><p class="value text-danger" id="sumDC">0</p></div></div>
         </div>
+        <div class="subtle text-end mt-2">* LOS แบบเวชระเบียน: เดือนเปิดคิดถึง "วันนี้"; เดือนปิดคิดถึง "สิ้นเดือน"</div>
       </div>
     </div>
   </div>
