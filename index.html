@@ -309,53 +309,71 @@
 
   <div class="tab-content">
 <div class="tab-pane fade show active" id="list-pane">
-      
-      <!-- 🟢 ตารางที่ 1: Active (กำลังรักษา) -->
-      <div class="card p-3 mb-3 border-top border-success border-4">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <div class="section-title text-success"><i class="bi bi-hospital"></i> 1. ผู้ป่วยที่กำลังรักษา (Active)</div>
-          <div class="d-flex gap-2 align-items-center"><span class="chip bg-light border">จำนวน: <b id="activeCount" class="text-success">0</b></span></div>
-        </div>
-        <div class="filters-bar">
-          <div class="filters-left">
-            <button class="seg-btn active" id="activeFilterAll" onclick="setTableFilter('active','ALL')">ทั้งหมด</button>
-            <button class="seg-btn seg-danger" id="activeFilterLong" onclick="setTableFilter('active','LONG')">Long-stay (≥30 วัน)</button>
-          </div>
-          <div class="filters-right">
-            <input class="form-control form-control-sm" style="width:240px" id="activeQuickSearch" placeholder="ค้นหา HN / AN / ชื่อ หรือ สาย" oninput="quickSearch('active', this.value)">
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table id="activeTable" class="table table-hover w-100 dt-responsive nowrap align-middle mb-0">
-            <thead class="table-light"><tr><th>ประเภท</th><th>ลำดับ</th><th>HN</th><th>AN</th><th>ชื่อ-นามสกุล</th><th>Admit</th><th>สาย/แผนก</th><th>LOS</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
-            <tbody id="activeBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ⚪️ ตารางที่ 2: จำหน่ายแล้ว (Discharged) -->
-      <div class="card p-3 border-top border-secondary border-4">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <div class="section-title text-secondary"><i class="bi bi-person-dash"></i> 2. ผู้ป่วยจำหน่ายแล้ว (D/C เดือนนี้)</div>
-          <div class="d-flex gap-2 align-items-center"><span class="chip bg-light border">จำนวน: <b id="dcCount">0</b></span></div>
-        </div>
-        <div class="filters-bar">
-          <div class="filters-left">
-            <button class="seg-btn active" id="dcFilterAll" onclick="setTableFilter('dc','ALL')">ทั้งหมด</button>
-          </div>
-          <div class="filters-right">
-            <input class="form-control form-control-sm" style="width:240px" id="dcQuickSearch" placeholder="ค้นหา HN / AN / ชื่อ" oninput="quickSearch('dc', this.value)">
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table id="dcTable" class="table table-hover w-100 dt-responsive nowrap align-middle mb-0">
-            <thead class="table-light"><tr><th>ประเภท</th><th>ลำดับ</th><th>HN</th><th>AN</th><th>ชื่อ-นามสกุล</th><th>Admit</th><th>สาย/แผนก</th><th>LOS</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
-            <tbody id="dcBody"></tbody>
-          </table>
-        </div>
-      </div>
-
+  
+  <!-- 🟦 ตารางที่ 1: ผู้ป่วยยอดยกมา (แยกเฉพาะยอดยกมา) -->
+  <div class="card p-3 mb-3 border-top border-secondary border-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div class="section-title text-secondary"><i class="bi bi-box-arrow-in-right"></i> ยอดยกมา</div>
+      <div class="d-flex gap-2 align-items-center"><span class="chip bg-light border">จำนวน: <b id="carryCount" class="text-secondary">0</b></span></div>
     </div>
+    <div class="filters-bar">
+      <div class="filters-left">
+        <button class="seg-btn active" id="carryFilterAll" onclick="setTableFilter('carry','ALL')">ทั้งหมด</button>
+        <button class="seg-btn seg-danger" id="carryFilterLong" onclick="setTableFilter('carry','LONG')">Long-stay (≥30 วัน)</button>
+      </div>
+      <div class="filters-right">
+        <input class="form-control form-control-sm" style="width:240px" id="carryQuickSearch" placeholder="ค้นหา HN / AN / ชื่อ" oninput="quickSearch('carry', this.value)">
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="carryTable" class="table table-hover w-100 dt-responsive nowrap align-middle mb-0">
+        <thead class="table-light"><tr><th>ประเภท</th><th>ลำดับ</th><th>HN</th><th>AN</th><th>ชื่อ-นามสกุล</th><th>Admit</th><th>สาย/แผนก</th><th>LOS</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+        <tbody id="carryBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 🟢 ตารางที่ 2: ผู้ป่วยรับใหม่ (รวมรับใหม่, ย้าย, Refer) -->
+  <div class="card p-3 mb-3 border-top border-primary border-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div class="section-title text-primary"><i class="bi bi-person-plus"></i> ผู้ป่วยรับใหม่เดือนนี้</div>
+      <div class="d-flex gap-2 align-items-center"><span class="chip bg-light border">จำนวน: <b id="newCount" class="text-primary">0</b></span></div>
+    </div>
+    <div class="filters-bar">
+      <div class="filters-left">
+        <button class="seg-btn active" id="newFilterAll" onclick="setTableFilter('new','ALL')">ทั้งหมด</button>
+      </div>
+      <div class="filters-right">
+        <input class="form-control form-control-sm" style="width:240px" id="newQuickSearch" placeholder="ค้นหา HN / AN / ชื่อ" oninput="quickSearch('new', this.value)">
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="newTable" class="table table-hover w-100 dt-responsive nowrap align-middle mb-0">
+        <thead class="table-light"><tr><th>ประเภท</th><th>ลำดับ</th><th>HN</th><th>AN</th><th>ชื่อ-นามสกุล</th><th>Admit</th><th>สาย/แผนก</th><th>LOS</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+        <tbody id="newBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ⚪️ ตารางที่ 3: จำหน่ายแล้ว (D/C) -->
+  <div class="card p-3 border-top border-secondary border-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div class="section-title text-secondary"><i class="bi bi-person-dash"></i> ผู้ป่วยจำหน่ายแล้ว</div>
+      <div class="d-flex gap-2 align-items-center"><span class="chip bg-light border">จำนวน: <b id="dcCount" class="text-secondary">0</b></span></div>
+    </div>
+    <div class="filters-bar">
+      <div class="filters-right">
+        <input class="form-control form-control-sm" style="width:240px" id="dcQuickSearch" placeholder="ค้นหา HN / AN / ชื่อ" oninput="quickSearch('dc', this.value)">
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="dcTable" class="table table-hover w-100 dt-responsive nowrap align-middle mb-0">
+        <thead class="table-light"><tr><th>ประเภท</th><th>ลำดับ</th><th>HN</th><th>AN</th><th>ชื่อ-นามสกุล</th><th>Admit</th><th>สาย/แผนก</th><th>LOS</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+        <tbody id="dcBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
     <div class="tab-pane fade" id="form-pane">
       <form id="dataForm">
@@ -789,26 +807,32 @@ function buildRowHtml(item) {
   </tr>`;
 }
 
+// 1. เปลี่ยนตัวแปรตาราง
+let carryDT, newDT, dcDT, auditDT;
+const tableState = { carry:{ filter:'ALL', search:'' }, new:{ filter:'ALL', search:'' }, dc:{ filter:'ALL', search:'' } };
+
+// 2. แก้ไขฟังก์ชัน renderTables
 function renderTables() {
-  // แยกคนไข้ตามสถานะ
-  const activeList = lastData.filter(x => x.status === 'ยังรักษาอยู่');
+  const carryList = lastData.filter(isCarryRow);
+  const newList = lastData.filter(isNewThisMonthRow);
   const dcList = lastData.filter(x => x.status === 'จำหน่ายแล้ว');
   
-  document.getElementById('activeCount').innerText = activeList.length; 
+  document.getElementById('carryCount').innerText = carryList.length;
+  document.getElementById('newCount').innerText = newList.length;
   document.getElementById('dcCount').innerText = dcList.length;
-
-  if(activeDT){ activeDT.destroy(); activeDT=null; } 
-  if(dcDT){ dcDT.destroy(); dcDT=null; }
   
-  document.getElementById('activeBody').innerHTML = activeList.map(buildRowHtml).join(''); 
+  if(carryDT) carryDT.destroy();
+  if(newDT) newDT.destroy();
+  if(dcDT) dcDT.destroy();
+  
+  document.getElementById('carryBody').innerHTML = carryList.map(buildRowHtml).join('');
+  document.getElementById('newBody').innerHTML = newList.map(buildRowHtml).join('');
   document.getElementById('dcBody').innerHTML = dcList.map(buildRowHtml).join('');
   
-  const dtOpts = { responsive:true, pageLength:50, language:{url:'//cdn.datatables.net/plug-ins/1.13.4/i18n/th.json'} };
-  activeDT = $('#activeTable').DataTable({ ...dtOpts, order:[[1,'desc']] });
-  dcDT   = $('#dcTable').DataTable({ ...dtOpts, order:[[1,'desc']] });
-  
-  activeDT.search(tableState.active.search||'').draw(); 
-  dcDT.search(tableState.dc.search||'').draw();
+  const dtOpts = { responsive:true, pageLength:25, language:{url:'//cdn.datatables.net/plug-ins/1.13.4/i18n/th.json'} };
+  carryDT = $('#carryTable').DataTable({ ...dtOpts, order:[[1,'desc']] });
+  newDT   = $('#newTable').DataTable({ ...dtOpts, order:[[1,'desc']] });
+  dcDT    = $('#dcTable').DataTable({ ...dtOpts, order:[[1,'desc']] });
 }
 
 function updateCharts(sMap, saMap){
@@ -833,8 +857,9 @@ function openPatientModal(item){
   if(item.status==='จำหน่ายแล้ว') document.getElementById('btnModalCancelDis').onclick=()=>{ mi.hide(); confirmCancelDischarge(item); }; else document.getElementById('btnModalDis').onclick=()=>{ mi.hide(); dischargeUI(item); }; document.getElementById('btnModalEdit').onclick=()=>{ mi.hide(); editPatient(item); }; document.getElementById('btnModalPDF').onclick=()=>printPDF(item); mi.show();
 }
 
+// 3. แก้ไขฟังก์ชัน bindTableEvents
 function bindTableEvents() {
-  ['activeBody','dcBody'].forEach(id => {
+  ['carryBody','newBody','dcBody'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.onclick = async (e) => { 
       const btn = e.target.closest('button[data-action]'); 
@@ -842,11 +867,9 @@ function bindTableEvents() {
       if(!tr) return; 
       const item = getItemByRowId(tr.getAttribute('data-rowid')); 
       if(!item) return; 
-      
       if(btn) { 
         e.stopPropagation(); 
         if(btn.dataset.action === 'dis') { await dischargeUI(item); } 
-        else if (btn.dataset.action === 'view') { openPatientModal(item); }
         return; 
       } 
       openPatientModal(item); 
