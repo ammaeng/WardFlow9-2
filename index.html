@@ -299,9 +299,26 @@
     </div>
   </div>
 
+<!-- ── 1. สรุปยอดแบบสมการ Census ── -->
   <div class="row g-2 mb-3">
-    <div class="col-12 col-lg-6"><div class="card p-3"><canvas id="chartSithi" style="max-height:200px;"></canvas></div></div>
-    <div class="col-12 col-lg-6"><div class="card p-3"><canvas id="chartSai" style="max-height:200px;"></canvas></div></div>
+    <div class="col-12">
+      <div class="card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="section-title text-dark"><i class="bi bi-clipboard-data me-2"></i>สรุปยอดผู้ป่วย (Census)</div>
+          <span class="chip bg-light border" id="sheetStatusChip">-</span>
+        </div>
+        <div class="row g-2 text-center align-items-center justify-content-center">
+          <div class="col-4 col-md-2"><div class="mini"><div class="label">ยอดยกมา</div><p class="value text-secondary" id="sumCarry">0</p></div></div>
+          <div class="col-auto d-none d-md-block"><i class="bi bi-plus-lg text-muted"></i></div>
+          <div class="col-4 col-md-2"><div class="mini" style="border-bottom: 3px solid #0d6efd;"><div class="label">รับใหม่เดือนนี้</div><p class="value text-primary" id="sumNew">0</p></div></div>
+          <div class="col-auto d-none d-md-block"><i class="bi bi-pause text-muted" style="transform: rotate(90deg);"></i></div>
+          <div class="col-4 col-md-2"><div class="mini"><div class="label">รวมทั้งหมด</div><p class="value text-dark" id="sumTotal">0</p></div></div>
+          <div class="col-auto d-none d-md-block"><i class="bi bi-arrow-right-circle-fill text-muted" style="font-size: 20px;"></i></div>
+          <div class="col-6 col-md-2"><div class="mini bg-success bg-opacity-10"><div class="label text-success fw-bold">Active ปัจจุบัน</div><p class="value text-success" id="sumActive">0</p></div></div>
+          <div class="col-6 col-md-2"><div class="mini"><div class="label text-danger">จำหน่ายแล้ว (D/C)</div><p class="value text-danger" id="sumDC">0</p></div></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <ul class="nav nav-pills nav-fill mb-3 bg-white p-1 rounded-pill shadow-sm" id="mainTab">
@@ -312,29 +329,53 @@
   </ul>
 
   <div class="tab-content">
-    <div class="tab-pane fade show active" id="list-pane">
-      <div class="card p-3 mb-3">
+<div class="tab-pane fade show active" id="list-pane">
+      
+      <!-- 🟢 ตารางที่ 1: Active (กำลังรักษา) -->
+      <div class="card p-3 mb-3 border-top border-success border-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <div class="section-title text-secondary">🟦 ผู้ป่วยยอดยกมา</div>
-          <div class="d-flex gap-2 align-items-center"><span class="chip bg-light border">จำนวน: <b id="carryCount">0</b></span><button class="btn btn-sm btn-outline-dark" onclick="exportCSV('CARRY')">Export CSV</button></div>
+          <div class="section-title text-success"><i class="bi bi-hospital"></i> 1. ผู้ป่วยที่กำลังรักษา (Active)</div>
+          <div class="d-flex gap-2 align-items-center"><span class="chip bg-light border">จำนวน: <b id="activeCount" class="text-success">0</b></span></div>
         </div>
         <div class="filters-bar">
-          <div class="filters-left"><button class="seg-btn active" id="carryFilterAll" onclick="setTableFilter('carry','ALL')">ทั้งหมด</button><button class="seg-btn" id="carryFilterActive" onclick="setTableFilter('carry','ACTIVE')">Active</button><button class="seg-btn" id="carryFilterDC" onclick="setTableFilter('carry','DC')">D/C</button><button class="seg-btn seg-danger" id="carryFilterLong" onclick="setTableFilter('carry','LONG')">Long-stay (≥30)</button></div>
-          <div class="filters-right"><input class="form-control form-control-sm" style="width:240px" id="carryQuickSearch" placeholder="ค้นหา HN / AN / ชื่อ" oninput="quickSearch('carry', this.value)"></div>
+          <div class="filters-left">
+            <button class="seg-btn active" id="activeFilterAll" onclick="setTableFilter('active','ALL')">ทั้งหมด</button>
+            <button class="seg-btn seg-danger" id="activeFilterLong" onclick="setTableFilter('active','LONG')">Long-stay (≥30 วัน)</button>
+          </div>
+          <div class="filters-right">
+            <input class="form-control form-control-sm" style="width:240px" id="activeQuickSearch" placeholder="ค้นหา HN / AN / ชื่อ หรือ สาย" oninput="quickSearch('active', this.value)">
+          </div>
         </div>
-        <div class="table-wrap"><table id="carryTable" class="table table-hover w-100 dt-responsive nowrap align-middle mb-0"><thead class="table-light"><tr><th>ประเภท</th><th>ลำดับ</th><th>HN</th><th>AN</th><th>ชื่อ-นามสกุล</th><th>Admit</th><th>แผนก</th><th>LOS</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody id="carryBody"></tbody></table></div>
+        <div class="table-wrap">
+          <table id="activeTable" class="table table-hover w-100 dt-responsive nowrap align-middle mb-0">
+            <thead class="table-light"><tr><th>ประเภท</th><th>ลำดับ</th><th>HN</th><th>AN</th><th>ชื่อ-นามสกุล</th><th>Admit</th><th>สาย/แผนก</th><th>LOS</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+            <tbody id="activeBody"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="card p-3">
+
+      <!-- ⚪️ ตารางที่ 2: จำหน่ายแล้ว (Discharged) -->
+      <div class="card p-3 border-top border-secondary border-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <div class="section-title text-primary">🟩 ผู้ป่วยรับใหม่เดือนนี้</div>
-          <div class="d-flex gap-2 align-items-center"><span class="chip bg-light border">จำนวน: <b id="newCount">0</b></span><button class="btn btn-sm btn-outline-dark" onclick="exportCSV('NEW')">Export CSV</button></div>
+          <div class="section-title text-secondary"><i class="bi bi-person-dash"></i> 2. ผู้ป่วยจำหน่ายแล้ว (D/C เดือนนี้)</div>
+          <div class="d-flex gap-2 align-items-center"><span class="chip bg-light border">จำนวน: <b id="dcCount">0</b></span></div>
         </div>
         <div class="filters-bar">
-          <div class="filters-left"><button class="seg-btn active" id="newFilterAll" onclick="setTableFilter('new','ALL')">ทั้งหมด</button><button class="seg-btn" id="newFilterActive" onclick="setTableFilter('new','ACTIVE')">Active</button><button class="seg-btn" id="newFilterDC" onclick="setTableFilter('new','DC')">D/C</button><button class="seg-btn seg-danger" id="newFilterLong" onclick="setTableFilter('new','LONG')">Long-stay (≥30)</button></div>
-          <div class="filters-right"><input class="form-control form-control-sm" style="width:240px" id="newQuickSearch" placeholder="ค้นหา HN / AN / ชื่อ" oninput="quickSearch('new', this.value)"></div>
+          <div class="filters-left">
+            <button class="seg-btn active" id="dcFilterAll" onclick="setTableFilter('dc','ALL')">ทั้งหมด</button>
+          </div>
+          <div class="filters-right">
+            <input class="form-control form-control-sm" style="width:240px" id="dcQuickSearch" placeholder="ค้นหา HN / AN / ชื่อ" oninput="quickSearch('dc', this.value)">
+          </div>
         </div>
-        <div class="table-wrap"><table id="newTable" class="table table-hover w-100 dt-responsive nowrap align-middle mb-0"><thead class="table-light"><tr><th>ประเภท</th><th>ลำดับ</th><th>HN</th><th>AN</th><th>ชื่อ-นามสกุล</th><th>Admit</th><th>แผนก</th><th>LOS</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody id="newBody"></tbody></table></div>
+        <div class="table-wrap">
+          <table id="dcTable" class="table table-hover w-100 dt-responsive nowrap align-middle mb-0">
+            <thead class="table-light"><tr><th>ประเภท</th><th>ลำดับ</th><th>HN</th><th>AN</th><th>ชื่อ-นามสกุล</th><th>Admit</th><th>สาย/แผนก</th><th>LOS</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+            <tbody id="dcBody"></tbody>
+          </table>
+        </div>
       </div>
+
     </div>
 
     <div class="tab-pane fade" id="form-pane">
@@ -432,7 +473,10 @@ const COL = { STATUS:0, SEQ:1, HN:2, AN:3, PREFIX:4, NAME:5, GENDER:6, AGE:7, AD
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsl00T-VpU3Fd9ESFGk-tlXwpGjED2dYj3Up8kymZwZDgeh3z94x_RT_8HZDBbLk8/exec";
 
 let currentSheet = ""; let currentYearBE = null;        
-let carryDT, newDT, auditDT, sithiChart, saiChart;
+// หาบรรทัดเดิม: let carryDT, newDT, auditDT, sithiChart, saiChart; 
+// เปลี่ยนเป็น:
+let activeDT, dcDT, auditDT;
+const tableState = { active:{ filter:'ALL', search:'' }, dc:{ filter:'ALL', search:'' } };
 let lastData =[], lastDataByRowId = new Map();
 const tableState = { carry:{ filter:'ALL', search:'' }, new:{ filter:'ALL', search:'' } };
 let lastTriggerEl = null, disItem = null, DX_OPTIONS =[];
@@ -684,38 +728,95 @@ function updateSummary(all){
 function rebuildIndex(){ lastDataByRowId = new Map(); lastData.forEach(x => lastDataByRowId.set(String(x.rowId), x)); }
 function getItemByRowId(rowId){ return lastDataByRowId.get(String(rowId)) || null; }
 
-function quickSearch(which, text){ tableState[which].search = String(text||''); const dt = which==='carry' ? carryDT : newDT; if(dt) dt.search(tableState[which].search).draw(); }
-function setTableFilter(which, mode){
-  tableState[which].filter = mode;
-  const ids = which==='carry' ?['carryFilterAll','carryFilterActive','carryFilterDC','carryFilterLong'] :['newFilterAll','newFilterActive','newFilterDC','newFilterLong'];
-  ids.forEach(id => document.getElementById(id)?.classList.remove('active')); const hit = which==='carry' ? (mode==='ALL'?'carryFilterAll':mode==='ACTIVE'?'carryFilterActive':mode==='DC'?'carryFilterDC':'carryFilterLong') : (mode==='ALL'?'newFilterAll':'newFilterActive'); document.getElementById(hit)?.classList.add('active'); const dt = which==='carry' ? carryDT : newDT; if(dt) dt.draw();
+function quickSearch(which, text) { 
+  tableState[which].search = String(text||''); 
+  const dt = which === 'active' ? activeDT : dcDT; 
+  if(dt) dt.search(tableState[which].search).draw(); 
 }
 
-$.fn.dataTable.ext.search.push(function(settings, data){
-  const id=settings.nTable?.getAttribute?.('id'); let which=null; if(id==='carryTable') which='carry'; if(id==='newTable') which='new'; if(!which) return true;
-  const mode=tableState[which].filter||'ALL'; if(mode==='ALL') return true; const los=parseInt((data[7]||'').replace(/[^\d]/g,''),10)||0; const status=String(data[8]||'').trim();
-  if(mode==='ACTIVE') return status.includes('ยังรักษาอยู่'); if(mode==='DC') return status.includes('จำหน่ายแล้ว'); if(mode==='LONG') return los>=30; return true;
+function setTableFilter(which, mode) {
+  tableState[which].filter = mode;
+  const ids = which === 'active' ? ['activeFilterAll','activeFilterLong'] : ['dcFilterAll'];
+  ids.forEach(id => document.getElementById(id)?.classList.remove('active')); 
+  
+  const hit = which === 'active' ? (mode==='ALL' ? 'activeFilterAll' : 'activeFilterLong') : 'dcFilterAll'; 
+  document.getElementById(hit)?.classList.add('active'); 
+  
+  const dt = which === 'active' ? activeDT : dcDT; 
+  if(dt) dt.draw();
+}
+
+// Custom Search Logic สำหรับตาราง
+$.fn.dataTable.ext.search.push(function(settings, data) {
+  const id = settings.nTable?.getAttribute?.('id'); 
+  let which = null; 
+  if(id === 'activeTable') which = 'active'; 
+  if(id === 'dcTable') which = 'dc'; 
+  if(!which) return true;
+  
+  const mode = tableState[which].filter || 'ALL'; 
+  if(mode === 'ALL') return true; 
+  const los = parseInt((data[7]||'').replace(/[^\d]/g,''), 10) || 0; 
+  
+  if(mode === 'LONG') return los >= 30; 
+  return true;
 });
 
-function buildRowHtml(item){
-  const r=item.rawData||[]; const type=(item.patientStatus||r[COL.STATUS]||'').trim(); const badgeMap={'ยอดยกมา':'bg-secondary','รับใหม่':'bg-primary','รับย้าย':'bg-dark','รับ Refer':'bg-info text-dark'}; const typeBadge=badgeMap[type]||'bg-light text-dark'; const statusBadge=item.status==='จำหน่ายแล้ว' ? '<span class="badge bg-success rounded-pill"><i class="bi bi-check-circle me-1"></i>จำหน่ายแล้ว</span>' : '<span class="badge bg-warning text-dark rounded-pill"><i class="bi bi-activity me-1"></i>ยังรักษาอยู่</span>'; const admitDate=r[COL.ADMIT_DATE]||r[COL.TRANSFER_IN_DATE]||r[COL.REFER_IN_DATE]||''; const los=parseInt(item.displayLOS,10); const losBadge=!isNaN(los)?`<span class="badge ${los>=30?'bg-danger':los>=7?'bg-warning text-dark':'bg-success'}">${los}</span>`:'';
-  return `<tr class="row-clickable ${!isNaN(los)&&los>=30?'row-longstay':''}" data-rowid="${item.rowId}"><td><span class="badge ${typeBadge}">${escapeHtml(type)}</span></td><td>${escapeHtml(r[COL.SEQ]||'')}</td><td>${escapeHtml(r[COL.HN]||'')}</td><td>${escapeHtml(r[COL.AN]||'')}</td><td>${escapeHtml(r[COL.NAME]||'')}</td><td>${escapeHtml(shortThaiDate(admitDate))}</td><td>${escapeHtml(r[COL.WARD]||'')}</td><td>${losBadge}</td><td>${statusBadge}</td><td class="text-center"><button class="btn-modern dis" data-action="dis" data-rowid="${item.rowId}" title="จำหน่าย"><i class="bi bi-hospital"></i></button></td></tr>`;
+function buildRowHtml(item) {
+  const r = item.rawData || []; 
+  const type = (item.patientStatus || r[COL.STATUS] || '').trim(); 
+  const badgeMap = {'ยอดยกมา':'bg-secondary','รับใหม่':'bg-primary','รับย้าย':'bg-dark','รับ Refer':'bg-info text-dark'}; 
+  const typeBadge = badgeMap[type] || 'bg-light text-dark'; 
+  
+  // สถานะและปุ่ม Action เปลี่ยนไปตาม Active / DC
+  const isActive = item.status === 'ยังรักษาอยู่';
+  const statusBadge = isActive 
+    ? '<span class="badge bg-warning text-dark rounded-pill"><i class="bi bi-activity me-1"></i>กำลังรักษา</span>'
+    : '<span class="badge bg-success rounded-pill"><i class="bi bi-check-circle me-1"></i>จำหน่ายแล้ว</span>';
+    
+  const actionBtn = isActive
+    ? `<button class="btn-modern dis" data-action="dis" data-rowid="${item.rowId}" title="คลิกเพื่อจำหน่าย"><i class="bi bi-hospital"></i></button>`
+    : `<button class="btn-modern edit" data-action="view" data-rowid="${item.rowId}" title="ดูข้อมูล"><i class="bi bi-search"></i></button>`;
+
+  const admitDate = r[COL.ADMIT_DATE] || r[COL.TRANSFER_IN_DATE] || r[COL.REFER_IN_DATE] || ''; 
+  const los = parseInt(item.displayLOS, 10); 
+  const losBadge = !isNaN(los) ? `<span class="badge ${los >= 30 ? 'bg-danger px-3' : los >= 7 ? 'bg-warning text-dark' : 'bg-success'}">${los} วัน</span>` : '';
+  const wardSai = `${escapeHtml(r[COL.SAI]||'-')} <small class="text-muted">(${escapeHtml(r[COL.WARD]||'-')})</small>`;
+
+  return `<tr class="row-clickable ${!isNaN(los) && los >= 30 && isActive ? 'row-longstay' : ''}" data-rowid="${item.rowId}">
+    <td><span class="badge ${typeBadge}">${escapeHtml(type)}</span></td>
+    <td>${escapeHtml(r[COL.SEQ]||'')}</td>
+    <td class="fw-bold">${escapeHtml(r[COL.HN]||'')}</td>
+    <td>${escapeHtml(r[COL.AN]||'')}</td>
+    <td>${escapeHtml(r[COL.NAME]||'')}</td>
+    <td>${escapeHtml(shortThaiDate(admitDate))}</td>
+    <td>${wardSai}</td>
+    <td>${losBadge}</td>
+    <td>${statusBadge}</td>
+    <td class="text-center">${actionBtn}</td>
+  </tr>`;
 }
 
-function renderTables(){
-  const carry = lastData.filter(isCarryRow); const nnew = lastData.filter(isNewThisMonthRow);
-  document.getElementById('carryCount').innerText = carry.length; document.getElementById('newCount').innerText = nnew.length;
-  if(carryDT){ carryDT.destroy(); carryDT=null; } if(newDT){ newDT.destroy(); newDT=null; }
-  document.getElementById('carryBody').innerHTML = carry.map(buildRowHtml).join(''); document.getElementById('newBody').innerHTML = nnew.map(buildRowHtml).join('');
-  const activeAll = lastData.filter(x=>x.status==='ยังรักษาอยู่').length; const dcAll = lastData.filter(x=>x.status==='จำหน่ายแล้ว').length;
-  document.getElementById('censusContent').innerHTML = `<div class="d-flex justify-content-between align-items-end"><div><div class="subtle">Active (ขณะนี้)</div><div style="font-size:38px;font-weight:900;line-height:1">${activeAll}</div></div><div class="text-end"><div class="subtle">D/C</div><div style="font-size:20px;font-weight:900">${dcAll}</div><div class="subtle mt-1">รวม: <b>${lastData.length}</b></div></div></div>`;
-
-  const sMap={}, saMap={}; lastData.forEach(item=>{ const r=item.rawData||[]; const sithi=r[COL.SITHI]||'ไม่ระบุ', sai=r[COL.SAI]||'ไม่ระบุ'; sMap[sithi]=(sMap[sithi]||0)+1; saMap[sai]=(saMap[sai]||0)+1; }); updateCharts(sMap, saMap);
+function renderTables() {
+  // แยกคนไข้ตามสถานะ
+  const activeList = lastData.filter(x => x.status === 'ยังรักษาอยู่');
+  const dcList = lastData.filter(x => x.status === 'จำหน่ายแล้ว');
   
-  const dtOpts = { responsive:true, pageLength:25, language:{url:'//cdn.datatables.net/plug-ins/1.13.4/i18n/th.json'} };
-  carryDT = $('#carryTable').DataTable({ ...dtOpts, order:[[1,'desc']] });
-  newDT   = $('#newTable').DataTable({ ...dtOpts, order:[[1,'desc']] });
-  carryDT.search(tableState.carry.search||'').draw(); newDT.search(tableState.new.search||'').draw();
+  document.getElementById('activeCount').innerText = activeList.length; 
+  document.getElementById('dcCount').innerText = dcList.length;
+
+  if(activeDT){ activeDT.destroy(); activeDT=null; } 
+  if(dcDT){ dcDT.destroy(); dcDT=null; }
+  
+  document.getElementById('activeBody').innerHTML = activeList.map(buildRowHtml).join(''); 
+  document.getElementById('dcBody').innerHTML = dcList.map(buildRowHtml).join('');
+  
+  const dtOpts = { responsive:true, pageLength:50, language:{url:'//cdn.datatables.net/plug-ins/1.13.4/i18n/th.json'} };
+  activeDT = $('#activeTable').DataTable({ ...dtOpts, order:[[1,'desc']] });
+  dcDT   = $('#dcTable').DataTable({ ...dtOpts, order:[[1,'desc']] });
+  
+  activeDT.search(tableState.active.search||'').draw(); 
+  dcDT.search(tableState.dc.search||'').draw();
 }
 
 function updateCharts(sMap, saMap){
@@ -740,10 +841,24 @@ function openPatientModal(item){
   if(item.status==='จำหน่ายแล้ว') document.getElementById('btnModalCancelDis').onclick=()=>{ mi.hide(); confirmCancelDischarge(item); }; else document.getElementById('btnModalDis').onclick=()=>{ mi.hide(); dischargeUI(item); }; document.getElementById('btnModalEdit').onclick=()=>{ mi.hide(); editPatient(item); }; document.getElementById('btnModalPDF').onclick=()=>printPDF(item); mi.show();
 }
 
-function bindTableEvents(){
-  ['carryBody','newBody'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.onclick=async(e)=>{ const btn=e.target.closest('button[data-action]'); const tr=e.target.closest('tr[data-rowid]'); if(!tr) return; const item=getItemByRowId(tr.getAttribute('data-rowid')); if(!item) return; if(btn){ e.stopPropagation(); if(btn.dataset.action==='dis') await dischargeUI(item); return; } openPatientModal(item); };
+function bindTableEvents() {
+  ['activeBody','dcBody'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.onclick = async (e) => { 
+      const btn = e.target.closest('button[data-action]'); 
+      const tr = e.target.closest('tr[data-rowid]'); 
+      if(!tr) return; 
+      const item = getItemByRowId(tr.getAttribute('data-rowid')); 
+      if(!item) return; 
+      
+      if(btn) { 
+        e.stopPropagation(); 
+        if(btn.dataset.action === 'dis') { await dischargeUI(item); } 
+        else if (btn.dataset.action === 'view') { openPatientModal(item); }
+        return; 
+      } 
+      openPatientModal(item); 
+    };
   });
 }
 
