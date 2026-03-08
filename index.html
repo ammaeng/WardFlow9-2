@@ -588,17 +588,74 @@ const AUTH_KEY = "cloudWard.auth";
 async function checkAuth() {
   const authData = JSON.parse(localStorage.getItem(AUTH_KEY) || "null");
   const now = new Date().getTime();
-  // หมดอายุใน 12 ชั่วโมง
+  
+  // เช็คว่าเคยล็อกอินไว้และยังไม่หมดอายุ (12 ชม.)
   if (authData && (now - authData.time < 12 * 60 * 60 * 1000)) {
     currentUser = authData;
-    // โหลดข้อมูลอัตโนมัติสำหรับคนล็อกอินค้างไว้
+    // 1. ซ่อนหน้าล็อกอิน และโชว์หน้าหลักทันที
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    document.getElementById('nurseIdText').innerText = currentUser.name;
+    
+    // 2. โชว์ Loading บนหน้าหลัก
     Swal.fire({title:'กำลังโหลดข้อมูล...', allowOutsideClick:false, didOpen:()=>Swal.showLoading()});
-    await bootApp();
+    await initSheets();
     Swal.close();
   } else {
     document.getElementById('loginOverlay').style.display = 'flex';
     document.getElementById('mainApp').style.display = 'none';
   }
+}
+
+document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('loginId').value.trim();
+  const pin = document.getElementById('loginPin').value.trim();
+  
+  Swal.fire({title:'กำลังตรวจสอบรหัสผ่าน...', allowOutsideClick:false, didOpen:()=>Swal.showLoading()});
+  
+  try {
+    // ส่งรหัสไปเช็คหลังบ้าน
+    const res = await callApi('login', { username: id, pin: pin });
+    currentUser = { id: res.nurseId, name: res.nurseName, role: res.role, time: new Date().getTime() };
+    localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
+    
+    // 1. รหัสถูกต้อง -> ปิดหน้าต่างล็อกอินทันที และเปิดหน้าหลัก
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    document.getElementById('nurseIdText').innerText = currentUser.name;
+    
+    // 2. เปลี่ยนข้อความโหลด ให้แสดงอยู่บนหน้าหลัก
+    Swal.fire({title:'กำลังโหลดข้อมูลเข้าสู่ระบบ...', allowOutsideClick:false, didOpen:()=>Swal.showLoading()});
+    
+    // 3. เริ่มโหลดข้อมูลใส่ตาราง
+    await initSheets(); 
+    Swal.close();
+    
+  } catch(err) {
+    Swal.fire('เข้าสู่ระบบไม่สำเร็จ', err.message, 'error');
+  }
+});
+
+function doLogout() {
+  Swal.fire({ title:'ออกจากระบบ?', icon:'question', showCancelButton:true, confirmButtonText:'ใช่', cancelButtonText:'ยกเลิก' }).then((r) => {
+    if (r.isConfirmed) { localStorage.removeItem(AUTH_KEY); location.reload(); }
+  });
+}
+
+async function callApi(action, data = null) {
+  const body = {
+    action, data,
+    meta: {
+      nurseId: currentUser ? currentUser.id : "",
+      nurseName: currentUser ? currentUser.name : "",
+      yearBE: currentYearBE || null        
+    }
+  };
+  const r = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify(body) });
+  const res = await r.json();
+  if (res.status === 'success') return res.data;
+  throw new Error(res.message);
 }
 
 document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
