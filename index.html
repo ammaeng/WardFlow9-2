@@ -663,20 +663,37 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
   const id = document.getElementById('loginId').value.trim();
   const pin = document.getElementById('loginPin').value.trim();
   
-  // โชว์ Loading ค้างไว้ตั้งแต่เริ่มกด Login
-  Swal.fire({title:'กำลังเข้าสู่ระบบและเตรียมข้อมูล...', allowOutsideClick:false, didOpen:()=>Swal.showLoading()});
+  // 1. ทันทีที่กดปุ่ม ให้ซ่อนหน้าล็อกอิน และโชว์หน้าแอปหลักทันที (0 วินาที)
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'block';
+  
+  // 2. เอาหน้าต่างโหลดมาบังหน้าแอปหลักไว้
+  Swal.fire({
+    title: 'กำลังตรวจสอบข้อมูล...', 
+    allowOutsideClick: false, 
+    didOpen: () => Swal.showLoading()
+  });
   
   try {
+    // 3. วิ่งไปเช็ครหัสผ่านหลังบ้าน
     const res = await callApi('login', { username: id, pin: pin });
     currentUser = { id: res.nurseId, name: res.nurseName, role: res.role, time: new Date().getTime() };
     localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
     
-    // โหลดข้อมูลทุกอย่างให้เสร็จ 100% ก่อน
-    await bootApp();
+    // ใส่ชื่อพยาบาลที่มุมขวาบน
+    document.getElementById('nurseIdText').innerText = currentUser.name;
     
-    // ปิด Loading และโชว์หน้าเว็บที่พร้อมใช้งานทันที
-    Swal.close();
+    // 4. เปลี่ยนข้อความในหน้าโหลดโดยไม่ต้องกระตุกปิด-เปิดใหม่
+    Swal.update({ title: 'รหัสถูกต้อง! กำลังเตรียมข้อมูล...' });
+    
+    // 5. โหลดตารางและข้อมูลทั้งหมด
+    await initSheets(); 
+    Swal.close(); // โหลดเสร็จทุกอย่าง ปิดวงกลมหมุน
+    
   } catch(err) {
+    // ถ้ารหัสผิด ให้สลับกลับไปโชว์หน้าล็อกอินเหมือนเดิม
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
     Swal.fire('เข้าสู่ระบบไม่สำเร็จ', err.message, 'error');
   }
 });
