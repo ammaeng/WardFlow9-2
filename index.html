@@ -583,7 +583,16 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 });
 
 async function doLogout() {
-  if (await appConfirm('ออกจากระบบ?', 'คุณต้องการออกจากระบบใช่หรือไม่?', 'question', 'ใช่, ออกจากระบบ', 'btn-danger')) { localStorage.removeItem(AUTH_KEY); _cachedDropdowns = null; location.reload(); }
+  if (await appConfirm('ออกจากระบบ?', 'คุณต้องการออกจากระบบใช่หรือไม่?', 'question', 'ใช่, ออกจากระบบ', 'btn-danger')) {
+    try {
+      // เรียก API ไปบันทึกการ Logout ก่อนลบ session
+      await callApi('logLogout', {});
+    } catch(e) { console.error("Logout log error", e); }
+    
+    localStorage.removeItem(AUTH_KEY); 
+    _cachedDropdowns = null; 
+    location.reload(); 
+  }
 }
 
 async function callApi(action, data = null) {
