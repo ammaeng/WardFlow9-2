@@ -1001,26 +1001,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
   // ── แก้ไข Auto-Logout ให้อยู่ข้างนอก และให้เป็นอิสระ ──
 
-let logoutTimer;
-function resetLogoutTimer() {
-    clearTimeout(logoutTimer);
-    // ตั้งค่า 1 นาที = 60,000 ms
-    logoutTimer = setTimeout(() => {
-        // เช็คว่าถ้ามีการ Login อยู่ค่อย Logout
-        if (typeof currentUser !== 'undefined' && currentUser) {
-            console.log("Auto-Logout triggered");
-            doLogout(); 
-        }
-    }, 30000); 
-}
 
-// ผูก Event ไว้กับ Document เพื่อตรวจจับการขยับเมาส์หรือการพิมพ์
-document.addEventListener('mousemove', resetLogoutTimer);
-document.addEventListener('keypress', resetLogoutTimer);
-document.addEventListener('scroll', resetLogoutTimer);
-
-// เริ่มนับเวลาทันทีที่โหลดหน้าเว็บ
-resetLogoutTimer();
 
   /* ════════════════════════════════════════════════
    AUDIT LOGS
@@ -1598,6 +1579,43 @@ function printOfficialReport(){
   win.focus(); 
   setTimeout(()=>win.print(),500); 
 }
+
+  function resetLogoutTimer() {
+    clearTimeout(logoutTimer);
+    logoutTimer = setTimeout(() => {
+        if (typeof currentUser !== 'undefined' && currentUser) {
+            // เตือนก่อนดีดออก 10 วินาที
+            if (confirm("คุณไม่ได้ใช้งานเกิน 1 นาที ระบบกำลังจะออกจากระบบอัตโนมัติ กด 'Cancel' เพื่อใช้งานต่อ")) {
+                resetLogoutTimer(); // ถ้ากด Cancel ให้เริ่มนับใหม่
+            } else {
+                doLogout();
+            }
+        }
+    }, 50000); // ตั้ง 50 วินาที เพื่อให้มีช่องว่างให้กด Cancel อีก 10 วินาที รวมเป็น 60 วินาที
+}
+
+  let logoutTimer;
+function resetLogoutTimer() {
+    clearTimeout(logoutTimer);
+    // ตั้งค่า 1 นาที = 60,000 ms
+    logoutTimer = setTimeout(() => {
+        // เช็คว่าถ้ามีการ Login อยู่ค่อย Logout
+        if (typeof currentUser !== 'undefined' && currentUser) {
+            console.log("Auto-Logout triggered");
+            doLogout(); 
+        }
+    }, 30000); 
+}
+
+// ผูก Event ไว้กับ Document เพื่อตรวจจับการขยับเมาส์หรือการพิมพ์
+document.addEventListener('mousemove', resetLogoutTimer);
+document.addEventListener('keypress', resetLogoutTimer);
+document.addEventListener('scroll', resetLogoutTimer);
+  document.addEventListener('touchstart', resetLogoutTimer); // เพิ่มอันนี้สำหรับ Tablet/Mobile
+
+
+// เริ่มนับเวลาทันทีที่โหลดหน้าเว็บ
+resetLogoutTimer();
 
 
 
