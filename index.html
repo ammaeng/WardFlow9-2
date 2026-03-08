@@ -1152,7 +1152,7 @@ async function closeMonthUI(){
       if(!await appConfirm('เริ่มเดือนแรก?', 'ระบบจะสร้างชีทเดือนปัจจุบันจาก Template', 'question', 'สร้างเดือนแรก', 'btn-primary')) return;
       showLoader('กำลังสร้างฐานข้อมูลเดือนแรก...'); const result=await callApi('initFirstMonth',{ yearBE:currentYearBE }); hideLoader(); await initSheets(); showSuccess('สร้างชีทเดือนแรกสำเร็จ'); return;
     }
-    const bedCountStr = await appPrompt('ปิดยอดเดือน', 'ระบบจะสร้าง Snapshot → สร้างชีทเดือนถัดไป → ย้ายยอดค้างเป็น "ยอดยกมา" และล็อกชีทเดือนเก่า', 'จำนวนเตียงที่เปิดจริง', 21); if(bedCountStr===null) return; const bedCount = Number(bedCountStr);
+    const bedCountStr = await appPrompt('ปิดยอดเดือน', 'ระบบจะสร้าง Snapshot → สร้างชีทเดือนถัดไป → ย้ายยอดค้างเป็น "ยอดยกมา" และล็อกชีทเดือนเก่า', 'จำนวนเตียงที่เปิดจริง', 24); if(bedCountStr===null) return; const bedCount = Number(bedCountStr);
     if(!await appConfirm('ยืนยันปิดยอด?', `เดือน ${currentSheet} จะถูกล็อกและไม่สามารถแก้ไขได้อีก`, 'warning', 'ยืนยันปิดยอด', 'btn-danger')) return;
     showLoader('กำลังประมวลผลปิดยอดเดือน... (อาจใช้เวลาสักครู่)'); const result=await callApi('closeMonthAction',{ currentSheetName:currentSheet, yearBE:currentYearBE, bedCount:bedCount||0 }); hideLoader();
     if(result.isNewYear){ await appConfirm(`🎉 ขึ้นปีใหม่ ${result.nextYearBE}!`, `ระบบสร้าง DB_${result.nextYearBE} ให้อัตโนมัติแล้ว`, 'success', 'รับทราบ', 'btn-success', false); }
