@@ -1617,7 +1617,7 @@ function resetLogoutTimer() {
     // ตั้งเวลา 50,000 ms (50 วินาที) ถ้าไม่มีการขยับ ให้เริ่มแสดง Modal
     logoutTimer = setTimeout(() => {
         showLogoutWarning();
-    }, 50000); 
+    }, 600000); 
 }
 
 function showLogoutWarning() {
@@ -1625,7 +1625,7 @@ function showLogoutWarning() {
         const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('logoutWarningModal'));
         modal.show();
         
-        let timeLeft = 10; // นับถอยหลัง 10 วินาทีสุดท้ายใน Modal
+        let timeLeft = 30; // นับถอยหลัง 10 วินาทีสุดท้ายใน Modal
         document.getElementById('logoutTimerDisplay').innerText = timeLeft;
         
         countdownInterval = setInterval(() => {
@@ -1695,7 +1695,7 @@ window.filterCrossYear=filterCrossYear;
       <div class="modal-body text-center p-4">
         <i class="bi bi-clock-history text-danger" style="font-size: 3rem;"></i>
         <h5 class="fw-black mt-3">ระบบกำลังจะออกจากระบบ</h5>
-        <p class="text-muted">เนื่องจากไม่มีการใช้งานเกิน 1 นาที</p>
+        <p class="text-muted">เนื่องจากไม่มีการใช้งานเกิน 10 นาที</p>
         <div class="display-4 fw-black text-danger my-3" id="logoutTimerDisplay">10</div>
         <button class="btn btn-primary rounded-pill w-100 fw-bold" onclick="stayLoggedIn()">ใช้งานต่อ</button>
       </div>
